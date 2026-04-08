@@ -1,0 +1,545 @@
+import { useEffect, useMemo, useState } from 'react'
+import { ShieldCheck, Users, GraduationCap, ChartLine, MailCheck, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useBrightness } from '@/contexts/BrightnessContext'
+import { ROUTE_PATHS } from '@/routes/paths'
+import { sendResetPasswordEmail } from '@/services/auth'
+import {
+  deleteAdminUserAccount,
+  getAdminMetrics,
+  getAdminUsers,
+  getAdminUserStageDetails,
+  resetAdminUserProgress,
+  type AdminMetrics,
+  type AdminUserRecord,
+  type AdminUserStageDetail,
+} from '@/services/admin'
+import { signOutAdmin } from '@/services/adminAuth'
+
+const KPI = ({
+  title,
+  value,
+  subtitle,
+  icon,
+  isBrightMode,
+}: {
+  title: string
+  value: string
+  subtitle: string
+  icon: React.ReactNode
+  isBrightMode: boolean
+}) => {
+  return (
+    <article
+      className={`rounded-2xl border p-5 ${
+        isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+            {title}
+          </p>
+          <p className={`mt-2 text-3xl font-bold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{value}</p>
+          <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>{subtitle}</p>
+        </div>
+        <div className={`rounded-xl p-2 ${isBrightMode ? 'bg-blue-50 text-blue-700' : 'bg-blue-500/20 text-blue-300'}`}>{icon}</div>
+      </div>
+    </article>
+  )
+}
+
+const INITIAL_METRICS: AdminMetrics = {
+  totalUsers: 0,
+  adminUsers: 0,
+  studentUsers: 0,
+  averageDiagnosticScore: 0,
+  averageSummativeScore: 0,
+  averageOverallScore: 0,
+}
+
+const AdminDashboardPage = () => {
+  const navigate = useNavigate()
+  const { isBrightMode } = useBrightness()
+  const [metrics, setMetrics] = useState<AdminMetrics>(INITIAL_METRICS)
+  const [users, setUsers] = useState<AdminUserRecord[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [sendingResetTo, setSendingResetTo] = useState<string | null>(null)
+  const [resettingProgressFor, setResettingProgressFor] = useState<string | null>(null)
+  const [deletingAccountFor, setDeletingAccountFor] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState('')
+  const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null)
+  const [selectedUserDetails, setSelectedUserDetails] = useState<AdminUserStageDetail[]>([])
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [detailsErrorMessage, setDetailsErrorMessage] = useState('')
+
+  const loadAdminData = async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
+
+    setErrorMessage('')
+
+    try {
+      const [nextMetrics, nextUsers] = await Promise.all([getAdminMetrics(), getAdminUsers()])
+      setMetrics(nextMetrics)
+      setUsers(nextUsers)
+    } catch {
+      setErrorMessage('Unable to load admin data. Check your Firestore permissions for admin access.')
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadAdminData()
+  }, [])
+
+  const handleSendReset = async (email: string, uid: string) => {
+    if (!email || email === 'No email') {
+      setActionMessage('Cannot send reset email because this user has no registered email.')
+      return
+    }
+
+    setActionMessage('')
+    setSendingResetTo(uid)
+
+    try {
+      await sendResetPasswordEmail(email)
+      setActionMessage(`Password reset link sent to ${email}.`)
+    } catch {
+      setActionMessage('Unable to send reset email. Verify Firebase Auth email-password provider settings.')
+    } finally {
+      setSendingResetTo(null)
+    }
+  }
+
+  const handleResetProgress = async (user: AdminUserRecord) => {
+    if (user.role === 'admin') {
+      setActionMessage('Progress reset is only available for student accounts.')
+      return
+    }
+
+    const shouldReset = window.confirm(`Reset all progress for ${user.fullName}? This cannot be undone.`)
+
+    if (!shouldReset) {
+      return
+    }
+
+    setActionMessage('')
+    setResettingProgressFor(user.uid)
+
+    try {
+      await resetAdminUserProgress(user.uid)
+
+      if (selectedUser?.uid === user.uid) {
+        setSelectedUserDetails([])
+      }
+
+      await loadAdminData(true)
+      setActionMessage(`Progress reset for ${user.fullName}.`)
+    } catch {
+      setActionMessage('Unable to reset user progress. Check Firestore permissions and try again.')
+    } finally {
+      setResettingProgressFor(null)
+    }
+  }
+
+  const handleDeleteAccount = async (user: AdminUserRecord) => {
+    if (user.role === 'admin') {
+      setActionMessage('Deleting admin accounts is disabled in the admin dashboard.')
+      return
+    }
+
+    const shouldDelete = window.confirm(`Delete account for ${user.fullName}? This cannot be undone.`)
+
+    if (!shouldDelete) {
+      return
+    }
+
+    setActionMessage('')
+    setDeletingAccountFor(user.uid)
+
+    try {
+      await deleteAdminUserAccount(user.uid)
+
+      if (selectedUser?.uid === user.uid) {
+        setSelectedUser(null)
+        setSelectedUserDetails([])
+      }
+
+      await loadAdminData(true)
+      setActionMessage(`Account deleted for ${user.fullName}.`)
+    } catch {
+      setActionMessage('Unable to delete account. Check Firestore permissions and try again.')
+    } finally {
+      setDeletingAccountFor(null)
+    }
+  }
+
+  const placeholders = useMemo(
+    () => [
+      {
+        title: 'Total Users',
+        value: String(metrics.totalUsers),
+        subtitle: `${metrics.adminUsers} admins and ${metrics.studentUsers} students`,
+        icon: <Users size={20} />,
+      },
+      {
+        title: 'Average Pre-test Score',
+        value: `${metrics.averageDiagnosticScore}%`,
+        subtitle: 'Across all submitted diagnostic assessments',
+        icon: <GraduationCap size={20} />,
+      },
+      {
+        title: 'Average Post-test Score',
+        value: `${metrics.averageSummativeScore}%`,
+        subtitle: `Overall score average: ${metrics.averageOverallScore}%`,
+        icon: <ChartLine size={20} />,
+      },
+    ],
+    [metrics],
+  )
+
+  const handleLogout = () => {
+    signOutAdmin()
+    navigate(ROUTE_PATHS.admin.login, { replace: true })
+  }
+
+  const handleSelectUser = async (user: AdminUserRecord) => {
+    setSelectedUser(user)
+    setIsLoadingDetails(true)
+    setDetailsErrorMessage('')
+
+    try {
+      const details = await getAdminUserStageDetails(user.uid)
+      setSelectedUserDetails(details)
+    } catch {
+      setSelectedUserDetails([])
+      setDetailsErrorMessage('Unable to load account details for this user.')
+    } finally {
+      setIsLoadingDetails(false)
+    }
+  }
+
+  const getStatusClasses = (status: string) => {
+    if (status === 'Passed') {
+      return isBrightMode ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-300'
+    }
+
+    if (status === 'Needs Improvement') {
+      return isBrightMode ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-300'
+    }
+
+    if (status === 'In Progress') {
+      return isBrightMode ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-300'
+    }
+
+    if (status === 'Submitted') {
+      return isBrightMode ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-500/20 text-indigo-300'
+    }
+
+    return isBrightMode ? 'bg-gray-100 text-gray-700' : 'bg-slate-700 text-slate-200'
+  }
+
+  if (isLoading) {
+    return <div className={`min-h-screen ${isBrightMode ? 'bg-[#fffdf7]' : 'bg-[#0f172a]'}`} />
+  }
+
+  return (
+    <main className={`min-h-screen p-8 ${isBrightMode ? 'bg-[#fffdf7]' : 'bg-[#0f172a]'}`}>
+      <section className="mx-auto w-full max-w-6xl space-y-6">
+      <header
+        className={`rounded-3xl border p-7 ${
+          isBrightMode ? 'border-gray-200 bg-linear-to-r from-white via-blue-50 to-cyan-50' : 'border-slate-700/60 bg-linear-to-r from-slate-900 via-slate-900 to-blue-950/40'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`rounded-2xl p-2 ${isBrightMode ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-300'}`}>
+            <ShieldCheck size={22} />
+          </div>
+          <div>
+            <h1 className={`text-2xl font-bold tracking-tight ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Admin Console</h1>
+            <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+              Monitor user growth, track average outcomes, and trigger password reset emails.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void loadAdminData(true)
+            }}
+            disabled={isRefreshing}
+            className={`ml-auto inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+              isBrightMode
+                ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
+                : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+            } ${isRefreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+              isBrightMode
+                ? 'border-red-300 bg-white text-red-700 hover:bg-red-50'
+                : 'border-red-500/50 bg-red-950/30 text-red-200 hover:bg-red-900/40'
+            }`}
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {errorMessage ? (
+        <article className={`rounded-2xl border px-4 py-3 text-sm ${isBrightMode ? 'border-red-200 bg-red-50 text-red-800' : 'border-red-500/40 bg-red-950/30 text-red-200'}`}>
+          {errorMessage}
+        </article>
+      ) : null}
+
+      {actionMessage ? (
+        <article className={`rounded-2xl border px-4 py-3 text-sm ${isBrightMode ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-blue-500/40 bg-blue-950/30 text-blue-200'}`}>
+          {actionMessage}
+        </article>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {placeholders.map((item) => (
+          <KPI
+            key={item.title}
+            title={item.title}
+            value={item.value}
+            subtitle={item.subtitle}
+            icon={item.icon}
+            isBrightMode={isBrightMode}
+          />
+        ))}
+      </div>
+
+      <article
+        className={`rounded-2xl border p-6 ${
+          isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className={`text-lg font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>User Management</h2>
+          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+            {users.length} user{users.length === 1 ? '' : 's'} loaded
+          </p>
+        </div>
+
+        {users.length === 0 ? (
+          <p className={`mt-4 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>No users found.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-180 text-left text-sm">
+              <thead>
+                <tr className={`${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                  <th className="py-2 pr-3 font-semibold">Name</th>
+                  <th className="py-2 pr-3 font-semibold">Email</th>
+                  <th className="py-2 pr-3 font-semibold">Role</th>
+                  <th className="py-2 pr-0 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr
+                    key={user.uid}
+                    onClick={() => {
+                      void handleSelectUser(user)
+                    }}
+                    className={`cursor-pointer border-t transition ${
+                      isBrightMode ? 'border-gray-200 text-gray-800 hover:bg-gray-50' : 'border-slate-700 text-slate-200 hover:bg-slate-800/40'
+                    } ${selectedUser?.uid === user.uid ? (isBrightMode ? 'bg-blue-50' : 'bg-blue-950/20') : ''}`}
+                  >
+                    <td className="py-3 pr-3">{user.fullName}</td>
+                    <td className="py-3 pr-3">{user.email}</td>
+                    <td className="py-3 pr-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
+                          user.role === 'admin'
+                            ? isBrightMode
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-blue-500/20 text-blue-300'
+                            : isBrightMode
+                              ? 'bg-gray-100 text-gray-700'
+                              : 'bg-slate-700 text-slate-200'
+                        }`}
+                      >
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="py-3 pl-3 pr-0 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void handleSendReset(user.email, user.uid)
+                        }}
+                        disabled={
+                          sendingResetTo === user.uid ||
+                          user.email === 'No email' ||
+                          resettingProgressFor === user.uid ||
+                          deletingAccountFor === user.uid
+                        }
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                          isBrightMode
+                            ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
+                            : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+                        } ${(sendingResetTo === user.uid || user.email === 'No email' || resettingProgressFor === user.uid || deletingAccountFor === user.uid) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        <MailCheck size={14} />
+                        {sendingResetTo === user.uid ? 'Sending...' : 'Send Reset Password'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void handleResetProgress(user)
+                        }}
+                        disabled={
+                          user.role === 'admin' ||
+                          resettingProgressFor === user.uid ||
+                          sendingResetTo === user.uid ||
+                          deletingAccountFor === user.uid
+                        }
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                          isBrightMode
+                            ? 'border-amber-300 bg-white text-amber-700 hover:bg-amber-50'
+                            : 'border-amber-500/50 bg-amber-950/30 text-amber-200 hover:bg-amber-900/40'
+                        } ${(user.role === 'admin' || resettingProgressFor === user.uid || sendingResetTo === user.uid || deletingAccountFor === user.uid) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        <RotateCcw size={14} />
+                        {resettingProgressFor === user.uid ? 'Resetting...' : 'Reset Progress'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void handleDeleteAccount(user)
+                        }}
+                        disabled={
+                          user.role === 'admin' ||
+                          deletingAccountFor === user.uid ||
+                          sendingResetTo === user.uid ||
+                          resettingProgressFor === user.uid
+                        }
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                          isBrightMode
+                            ? 'border-red-300 bg-white text-red-700 hover:bg-red-50'
+                            : 'border-red-500/50 bg-red-950/30 text-red-200 hover:bg-red-900/40'
+                        } ${(user.role === 'admin' || deletingAccountFor === user.uid || sendingResetTo === user.uid || resettingProgressFor === user.uid) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        <Trash2 size={14} />
+                        {deletingAccountFor === user.uid ? 'Deleting...' : 'Delete Account'}
+                      </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className={`mt-6 rounded-2xl border p-5 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700/60 bg-slate-950/40'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className={`text-base font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Account Details</h3>
+            {selectedUser ? (
+              <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                {selectedUser.fullName}
+              </p>
+            ) : null}
+          </div>
+
+          {!selectedUser ? (
+            <p className={`mt-3 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+              Select an account above to view grading stage scores and status.
+            </p>
+          ) : null}
+
+          {detailsErrorMessage ? (
+            <p className={`mt-3 rounded-xl border px-3 py-2 text-sm ${isBrightMode ? 'border-red-200 bg-red-50 text-red-700' : 'border-red-500/40 bg-red-950/30 text-red-200'}`}>
+              {detailsErrorMessage}
+            </p>
+          ) : null}
+
+          {isLoadingDetails ? (
+            <p className={`mt-3 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>Loading account details...</p>
+          ) : null}
+
+          {!isLoadingDetails && selectedUserDetails.length > 0 ? (
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {selectedUserDetails.map((stageDetail) => (
+                <article
+                  key={stageDetail.stage}
+                  className={`rounded-xl border p-4 ${isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700 bg-slate-900/70'}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className={`text-sm font-bold uppercase tracking-[0.16em] ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
+                      {stageDetail.label}
+                    </h4>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${getStatusClasses(stageDetail.stageStatus)}`}>
+                      {stageDetail.stageStatus}
+                    </span>
+                  </div>
+
+                  <dl className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <dt className={isBrightMode ? 'text-gray-600' : 'text-slate-400'}>Diagnostic Score</dt>
+                      <dd className={isBrightMode ? 'text-gray-900 font-semibold' : 'text-slate-100 font-semibold'}>
+                        {stageDetail.diagnosticScore === null ? 'N/A' : `${stageDetail.diagnosticScore}%`}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <dt className={isBrightMode ? 'text-gray-600' : 'text-slate-400'}>Diagnostic Status</dt>
+                      <dd>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getStatusClasses(stageDetail.diagnosticStatus)}`}>
+                          {stageDetail.diagnosticStatus}
+                        </span>
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <dt className={isBrightMode ? 'text-gray-600' : 'text-slate-400'}>Summative Status</dt>
+                      <dd>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getStatusClasses(stageDetail.summativeStatus)}`}>
+                          {stageDetail.summativeStatus}
+                        </span>
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <dt className={isBrightMode ? 'text-gray-600' : 'text-slate-400'}>Post-test Trials</dt>
+                      <dd className="w-full">
+                        <div className="mt-1 grid grid-cols-3 gap-2 text-[10px] font-semibold uppercase tracking-wide text-center">
+                          <span className={isBrightMode ? 'text-gray-500' : 'text-slate-400'}>Trial 1</span>
+                          <span className={isBrightMode ? 'text-gray-500' : 'text-slate-400'}>Trial 2</span>
+                          <span className={isBrightMode ? 'text-gray-500' : 'text-slate-400'}>Trial 3</span>
+                        </div>
+                        <div className={`mt-1 grid grid-cols-3 gap-2 text-center text-sm font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
+                          <span>{stageDetail.summativeScoreHistory[0] !== undefined ? `${stageDetail.summativeScoreHistory[0]}%` : '-'}</span>
+                          <span>{stageDetail.summativeScoreHistory[1] !== undefined ? `${stageDetail.summativeScoreHistory[1]}%` : '-'}</span>
+                          <span>{stageDetail.summativeScoreHistory[2] !== undefined ? `${stageDetail.summativeScoreHistory[2]}%` : '-'}</span>
+                        </div>
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </article>
+      </section>
+    </main>
+  )
+}
+
+export default AdminDashboardPage
