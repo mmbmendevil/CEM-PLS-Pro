@@ -696,15 +696,6 @@ const PostTestGapAnalysisPage = () => {
                       <ArrowLeft size={14} />
                       Back to Recommendations
                     </button>
-
-                    <Link
-                      to={ROUTE_PATHS.dashboard.review}
-                      className="inline-flex items-center gap-2 h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      Go to Review Materials
-                      <ArrowRight size={14} />
-                    </Link>
-
                     <button
                       type="button"
                       onClick={() => setShowPostTestQA(true)}
