@@ -26,9 +26,7 @@ import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
 import {
   getUserAssessmentProgress,
-  saveReviewerNarrationScript,
-  upsertAssessmentProgress,
-  type AssessmentProgressRecord,
+  clearReviewerData,
 } from '../../services/assessmentProgress'
 
 type ScoreMetric = {
@@ -61,7 +59,6 @@ const LearningResultsPage = () => {
   const [failedAttempts, setFailedAttempts] = useState<number>(0)
   const [isSummativeLocked, setIsSummativeLocked] = useState<boolean>(false)
   const [summativeScoreHistory, setSummativeScoreHistory] = useState<number[]>([])
-  const [diagnosticRecord, setDiagnosticRecord] = useState<AssessmentProgressRecord | null>(null)
   const [isResettingReviewer, setIsResettingReviewer] = useState(false)
 
   useEffect(() => {
@@ -117,7 +114,6 @@ const LearningResultsPage = () => {
         setPassed(activeStageSummative.passed === true)
         setPosttestPercentage(typeof activeStageSummative.percentage === 'number' ? activeStageSummative.percentage : 0)
         setPretestPercentage(typeof stageDiagnostic?.percentage === 'number' ? stageDiagnostic.percentage : 0)
-        setDiagnosticRecord(stageDiagnostic ?? null)
         setFailedAttempts(attempts)
         setIsSummativeLocked(locked)
         setSummativeScoreHistory(history)
@@ -197,7 +193,7 @@ const LearningResultsPage = () => {
   }
 
   const handleResetReviewer = async () => {
-    if (!uid || !resultStage || !diagnosticRecord || isResettingReviewer) {
+    if (!uid || !resultStage || isResettingReviewer) {
       return
     }
 
@@ -206,30 +202,7 @@ const LearningResultsPage = () => {
     const assessmentKey = getLearningStageConfig(resultStage).diagnosticAssessmentKey
 
     try {
-      await saveReviewerNarrationScript({ uid, assessmentKey, script: '' })
-      await upsertAssessmentProgress({
-        uid,
-        assessmentKey,
-        score: diagnosticRecord.score ?? 0,
-        totalItems: diagnosticRecord.totalItems ?? 0,
-        percentage: diagnosticRecord.percentage ?? 0,
-        passed: diagnosticRecord.passed === true,
-        aiReviewerOutput: '',
-        reviewerNarrationStorage: 'inline',
-        reviewerNarrationChunkCount: 0,
-        isReviewUnlocked: false,
-        reviewerPreference: diagnosticRecord.reviewerPreference,
-        competencyBreakdown: diagnosticRecord.competencyBreakdown,
-        questionIds: diagnosticRecord.questionIds,
-        selectedAnswers: diagnosticRecord.selectedAnswers,
-        currentQuestionIndex: diagnosticRecord.currentQuestionIndex,
-        isStudyPlanUnlocked: diagnosticRecord.isStudyPlanUnlocked,
-        isSubmitted: diagnosticRecord.isSubmitted,
-        isFinished: diagnosticRecord.isFinished,
-        failedAttempts: diagnosticRecord.failedAttempts,
-        isLocked: diagnosticRecord.isLocked,
-        scoreHistory: diagnosticRecord.scoreHistory,
-      })
+      await clearReviewerData({ uid, assessmentKey })
 
       navigate(ROUTE_PATHS.dashboard.studyPlan, {
         state: {
@@ -362,8 +335,8 @@ const LearningResultsPage = () => {
                 <button
                   type="button"
                   onClick={handleResetReviewer}
-                  disabled={isResettingReviewer || !diagnosticRecord}
-                  className={`h-14 px-10 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-[0.2em] inline-flex items-center gap-3 ${isBrightMode ? 'border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700' : 'border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300'} ${isResettingReviewer || !diagnosticRecord ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={isResettingReviewer}
+                  className={`h-14 px-10 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-[0.2em] inline-flex items-center gap-3 ${isBrightMode ? 'border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700' : 'border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300'} ${isResettingReviewer ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <RotateCcw size={16} /> Reset Reviewer
                 </button>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBrightness } from '../../contexts/BrightnessContext'
 import { useGradingStage } from '@/contexts/GradingStageContext'
-import { getLearningStageConfig, getStageDiagnosticRecord, resolveStageForSelection } from '../data/learningStage'
+import { getLearningStageConfig, getStageDiagnosticRecord, getStageSummativeRecord, resolveStageForSelection } from '../data/learningStage'
 import {
   getDiagnosticQuestionPoolForStage,
   getDiagnosticQuestionsByIdsForStage,
@@ -20,7 +20,7 @@ import {
 } from '../data/reviewerPromptBuilder'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
-import type { AssessmentCompetencyBreakdown } from '../../services/assessmentProgress'
+import type { AssessmentCompetencyBreakdown, AssessmentProgressRecord } from '../../services/assessmentProgress'
 import {
   getUserAssessmentProgress,
   loadReviewerNarrationScript,
@@ -43,6 +43,34 @@ const initSteps: InitStep[] = [
   { id: 4, label: 'Finalizing reviewer output' },
 ]
 
+const buildCompetencyBreakdown = (
+  questions: Array<{
+    competencyCode: string
+    correctAnswerIndex: number
+    id: number
+  }>,
+  selectedAnswers: Record<number, number>,
+) => {
+  const breakdown: AssessmentCompetencyBreakdown = {}
+
+  for (const question of questions) {
+    const competency = question.competencyCode
+    if (!breakdown[competency]) {
+      breakdown[competency] = { correct: 0, total: 0, percentage: 0 }
+    }
+
+    const isCorrect = selectedAnswers[question.id] === question.correctAnswerIndex
+    breakdown[competency].total += 1
+    breakdown[competency].correct += isCorrect ? 1 : 0
+  }
+
+  Object.values(breakdown).forEach((entry) => {
+    entry.percentage = entry.total > 0 ? Number(((entry.correct / entry.total) * 100).toFixed(2)) : 0
+  })
+
+  return breakdown
+}
+
 const PersonalizedStudyPlanPage = () => {
   const { isBrightMode } = useBrightness()
   const { selectedStage } = useGradingStage()
@@ -61,12 +89,13 @@ const PersonalizedStudyPlanPage = () => {
   const [score, setScore] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
   const [percentage, setPercentage] = useState(0)
-  const [passedPretest, setPassedPretest] = useState(false)
+  const [, setPassedPretest] = useState(false)
   const [competencyBreakdown, setCompetencyBreakdown] = useState<AssessmentCompetencyBreakdown>({})
   const [questionIds, setQuestionIds] = useState<number[]>([])
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
   const [aiReviewer, setAiReviewer] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [diagnosticRecord, setDiagnosticRecord] = useState<AssessmentProgressRecord | null>(null)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -99,37 +128,49 @@ const PersonalizedStudyPlanPage = () => {
       const assessmentMap = new Map(assessmentRecords.map((record) => [record.assessmentKey, record]))
       const activeStage = resolveStageForSelection(assessmentMap, selectedStage)
       const activeStageConfig = getLearningStageConfig(activeStage)
-      const record = getStageDiagnosticRecord(assessmentMap, activeStage)
+      const diagnosticRecord = getStageDiagnosticRecord(assessmentMap, activeStage)
+      const summativeRecord = getStageSummativeRecord(assessmentMap, activeStage)
+      const hasSummative = Boolean(summativeRecord?.isSubmitted === true || summativeRecord?.isFinished === true)
+      const reviewerSourceRecord = hasSummative ? summativeRecord : diagnosticRecord
       setActiveStage(activeStage)
       setAssessmentKey(activeStageConfig.diagnosticAssessmentKey)
 
-      setIsUnlocked(record?.isStudyPlanUnlocked === true)
-      setScore(record?.score ?? 0)
-      setTotalItems(record?.totalItems ?? getDiagnosticQuestionPoolForStage(activeStage).length)
-      setPercentage(record?.percentage ?? 0)
-      setPassedPretest(record?.passed === true)
-      setCompetencyBreakdown(record?.competencyBreakdown ?? {})
-      setQuestionIds((record?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId)))
-      setSelectedAnswers(
-        normalizeSelectedAnswersForStage(
-          Object.fromEntries(
-          Object.entries(record?.selectedAnswers ?? {}).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),
-          ),
-          activeStage,
+      setDiagnosticRecord(diagnosticRecord ?? null)
+      setIsUnlocked(diagnosticRecord?.isStudyPlanUnlocked === true)
+      setScore(reviewerSourceRecord?.score ?? 0)
+      setTotalItems(reviewerSourceRecord?.totalItems ?? getDiagnosticQuestionPoolForStage(activeStage).length)
+      setPercentage(reviewerSourceRecord?.percentage ?? 0)
+      setPassedPretest(diagnosticRecord?.passed === true)
+
+      const reviewerQuestionIds = (reviewerSourceRecord?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId))
+      const reviewerSelectedAnswers = normalizeSelectedAnswersForStage(
+        Object.fromEntries(
+          Object.entries(reviewerSourceRecord?.selectedAnswers ?? {}).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),
         ),
+        activeStage,
       )
-      const existingReviewer = record
+
+      const reviewerQuestions = reviewerQuestionIds.length > 0
+        ? getDiagnosticQuestionsByIdsForStage(reviewerQuestionIds, activeStage)
+        : getDiagnosticQuestionPoolForStage(activeStage)
+
+      setCompetencyBreakdown(
+        reviewerSourceRecord?.competencyBreakdown ?? buildCompetencyBreakdown(reviewerQuestions, reviewerSelectedAnswers),
+      )
+      setQuestionIds(reviewerQuestionIds)
+      setSelectedAnswers(reviewerSelectedAnswers)
+      const existingReviewer = diagnosticRecord
         ? await loadReviewerNarrationScript({
             uid,
-            assessmentKey: record.assessmentKey,
-            fallbackInline: record.aiReviewerOutput,
-            narrationStorage: record.reviewerNarrationStorage,
+            assessmentKey: diagnosticRecord.assessmentKey,
+            fallbackInline: diagnosticRecord.aiReviewerOutput,
+            narrationStorage: diagnosticRecord.reviewerNarrationStorage,
           })
         : ''
       setAiReviewer(existingReviewer)
       setPhase(existingReviewer ? 'ready' : 'setup')
 
-      const loadedPreference = record?.reviewerPreference
+      const loadedPreference = diagnosticRecord?.reviewerPreference
       if (
         loadedPreference === 'flashcards' ||
         loadedPreference === 'audiobook' ||
@@ -245,8 +286,12 @@ const PersonalizedStudyPlanPage = () => {
     setPhase('initializing')
     setActiveStep(0)
 
-    const selectedAnswersForStorage = Object.fromEntries(
+    const storageSelectedAnswers = diagnosticRecord?.selectedAnswers ?? Object.fromEntries(
       Object.entries(selectedAnswers).map(([questionId, answerIndex]) => [String(questionId), answerIndex]),
+    )
+    const storageQuestionIds = diagnosticRecord?.questionIds ?? questionIds
+    const selectedAnswersForStorage = Object.fromEntries(
+      Object.entries(storageSelectedAnswers).map(([questionId, answerIndex]) => [String(questionId), Number(answerIndex)]),
     )
 
     const start = Date.now()
@@ -328,19 +373,19 @@ const PersonalizedStudyPlanPage = () => {
       await upsertAssessmentProgress({
         uid,
         assessmentKey,
-        score,
-        totalItems,
-        percentage,
-        passed: passedPretest,
+        score: diagnosticRecord?.score ?? score,
+        totalItems: diagnosticRecord?.totalItems ?? totalItems,
+        percentage: diagnosticRecord?.percentage ?? percentage,
+        passed: diagnosticRecord?.passed === true,
         aiReviewerOutput: reviewerPreference === 'flashcards' ? reviewerOutput : undefined,
         isStudyPlanUnlocked: true,
         isReviewUnlocked: true,
         reviewerPreference,
-        competencyBreakdown,
-        questionIds,
+        competencyBreakdown: diagnosticRecord?.competencyBreakdown ?? competencyBreakdown,
+        questionIds: storageQuestionIds,
         selectedAnswers: selectedAnswersForStorage,
-        isSubmitted: true,
-        isFinished: true,
+        isSubmitted: diagnosticRecord?.isSubmitted ?? true,
+        isFinished: diagnosticRecord?.isFinished ?? true,
       })
 
       if (reviewerPreference !== 'flashcards') {

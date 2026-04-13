@@ -13,7 +13,7 @@ import {
 } from '../data/diagnosticQuestions'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
-import { getUserAssessmentProgress, saveReviewerNarrationScript, upsertAssessmentProgress, type AssessmentProgressRecord } from '../../services/assessmentProgress'
+import { clearReviewerData, getUserAssessmentProgress, type AssessmentProgressRecord } from '../../services/assessmentProgress'
 
 const preferenceLabels: Record<string, string> = {
   flashcards: 'Flashcards',
@@ -48,7 +48,7 @@ const ReviewPage = () => {
   const [isReviewUnlocked, setIsReviewUnlocked] = useState(false)
   const [selectedModuleDeck, setSelectedModuleDeck] = useState<string | null>(null)
   const [selectedCardIndex, setSelectedCardIndex] = useState(0)
-  const [diagnosticRecord, setDiagnosticRecord] = useState<AssessmentProgressRecord | null>(null)
+  const [, setDiagnosticRecord] = useState<AssessmentProgressRecord | null>(null)
   const [isResettingReviewer, setIsResettingReviewer] = useState(false)
 
   useEffect(() => {
@@ -214,7 +214,7 @@ const ReviewPage = () => {
   const redirectNotice = (location.state as { redirectNotice?: string } | null)?.redirectNotice ?? ''
 
   const handleResetReviewer = async () => {
-    if (!uid || !diagnosticRecord || isResettingReviewer) {
+    if (!uid || isResettingReviewer) {
       return
     }
 
@@ -222,30 +222,7 @@ const ReviewPage = () => {
     const assessmentKey = getLearningStageConfig(activeStage).diagnosticAssessmentKey
 
     try {
-      await saveReviewerNarrationScript({ uid, assessmentKey, script: '' })
-      await upsertAssessmentProgress({
-        uid,
-        assessmentKey,
-        score: diagnosticRecord.score ?? 0,
-        totalItems: diagnosticRecord.totalItems ?? 0,
-        percentage: diagnosticRecord.percentage ?? 0,
-        passed: diagnosticRecord.passed === true,
-        aiReviewerOutput: '',
-        reviewerNarrationStorage: 'inline',
-        reviewerNarrationChunkCount: 0,
-        isReviewUnlocked: false,
-        reviewerPreference: diagnosticRecord.reviewerPreference,
-        competencyBreakdown: diagnosticRecord.competencyBreakdown,
-        questionIds: diagnosticRecord.questionIds,
-        selectedAnswers: diagnosticRecord.selectedAnswers,
-        currentQuestionIndex: diagnosticRecord.currentQuestionIndex,
-        isStudyPlanUnlocked: diagnosticRecord.isStudyPlanUnlocked,
-        isSubmitted: diagnosticRecord.isSubmitted,
-        isFinished: diagnosticRecord.isFinished,
-        failedAttempts: diagnosticRecord.failedAttempts,
-        isLocked: diagnosticRecord.isLocked,
-        scoreHistory: diagnosticRecord.scoreHistory,
-      })
+      await clearReviewerData({ uid, assessmentKey })
 
       navigate(ROUTE_PATHS.dashboard.studyPlan, {
         state: {
@@ -302,8 +279,8 @@ const ReviewPage = () => {
             <button
               type="button"
               onClick={handleResetReviewer}
-              disabled={isResettingReviewer || !diagnosticRecord}
-              className={`inline-flex h-12 items-center gap-2 rounded-xl px-6 text-xs font-black uppercase tracking-widest ${isBrightMode ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 border border-rose-500/40'} ${isResettingReviewer || !diagnosticRecord ? 'opacity-60 cursor-not-allowed' : ''}`}
+              disabled={isResettingReviewer}
+              className={`inline-flex h-12 items-center gap-2 rounded-xl px-6 text-xs font-black uppercase tracking-widest ${isBrightMode ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 border border-rose-500/40'} ${isResettingReviewer ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <RotateCcw size={14} />
               {isResettingReviewer ? 'Resetting...' : 'Create New Reviewer'}

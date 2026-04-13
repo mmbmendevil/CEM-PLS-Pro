@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
 export type AssessmentCompetencyBreakdown = Record<
@@ -115,6 +115,30 @@ const splitNarrationScript = (script: string, chunkSize: number) => {
 const clearReviewerNarrationChunks = async (uid: string, assessmentKey: string) => {
   const snapshots = await getDocs(getNarrationChunkCollection(uid, assessmentKey))
   await Promise.all(snapshots.docs.map((entry) => deleteDoc(entry.ref)))
+}
+
+export const clearReviewerData = async ({
+  uid,
+  assessmentKey,
+}: {
+  uid: string
+  assessmentKey: string
+}) => {
+  await setDoc(
+    getAssessmentDoc(uid, assessmentKey),
+    {
+      aiReviewerOutput: deleteField(),
+      aiReviewerAudioUrl: deleteField(),
+      reviewerNarrationStorage: deleteField(),
+      reviewerNarrationChunkCount: deleteField(),
+      reviewerPreference: deleteField(),
+      isReviewUnlocked: false,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+
+  await clearReviewerNarrationChunks(uid, assessmentKey)
 }
 
 export const saveReviewerNarrationScript = async ({
