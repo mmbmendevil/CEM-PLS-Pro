@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { useBrightness } from '@/contexts/BrightnessContext'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { sendResetPasswordEmail } from '@/services/auth'
+import { getDiagnosticQuestionsByIdsForStage } from '@/dashboard/data/diagnosticQuestions'
+import type { LearningStageKey } from '@/dashboard/data/learningStage'
 import {
   deleteAdminUserAccount,
   getAdminMetrics,
@@ -74,6 +76,7 @@ const AdminDashboardPage = () => {
   const [selectedUserDetails, setSelectedUserDetails] = useState<AdminUserStageDetail[]>([])
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [detailsErrorMessage, setDetailsErrorMessage] = useState('')
+  const [selectedTrial, setSelectedTrial] = useState<{ stage: LearningStageKey; index: number } | null>(null)
 
   const loadAdminData = async (refreshing = false) => {
     if (refreshing) {
@@ -213,6 +216,7 @@ const AdminDashboardPage = () => {
 
   const handleSelectUser = async (user: AdminUserRecord) => {
     setSelectedUser(user)
+    setSelectedTrial(null)
     setIsLoadingDetails(true)
     setDetailsErrorMessage('')
 
@@ -246,6 +250,35 @@ const AdminDashboardPage = () => {
 
     return isBrightMode ? 'bg-gray-100 text-gray-700' : 'bg-slate-700 text-slate-200'
   }
+
+  const selectedTrialDetail = useMemo(() => {
+    if (!selectedTrial) {
+      return null
+    }
+
+    return selectedUserDetails.find((detail) => detail.stage === selectedTrial.stage)?.summativeAttemptDetails?.[selectedTrial.index] ?? null
+  }, [selectedTrial, selectedUserDetails])
+
+  const selectedTrialQuestions = useMemo(() => {
+    if (!selectedTrial || !selectedTrialDetail) {
+      return []
+    }
+
+    const questions = getDiagnosticQuestionsByIdsForStage(selectedTrialDetail.questionIds ?? [], selectedTrial.stage)
+    const selectedAnswers = selectedTrialDetail.selectedAnswers ?? {}
+
+    return questions.map((question) => {
+      const selectedIndex = selectedAnswers[String(question.id)]
+      return {
+        id: question.id,
+        module: question.module,
+        question: question.question,
+        selectedIndex,
+        correctIndex: question.correctAnswerIndex,
+        options: question.options,
+      }
+    })
+  }, [selectedTrial, selectedTrialDetail])
 
   if (isLoading) {
     return <div className={`min-h-screen ${isBrightMode ? 'bg-[#fffdf7]' : 'bg-[#0f172a]'}`} />
@@ -524,15 +557,92 @@ const AdminDashboardPage = () => {
                           <span className={isBrightMode ? 'text-gray-500' : 'text-slate-400'}>Trial 3</span>
                         </div>
                         <div className={`mt-1 grid grid-cols-3 gap-2 text-center text-sm font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
-                          <span>{stageDetail.summativeScoreHistory[0] !== undefined ? `${stageDetail.summativeScoreHistory[0]}%` : '-'}</span>
-                          <span>{stageDetail.summativeScoreHistory[1] !== undefined ? `${stageDetail.summativeScoreHistory[1]}%` : '-'}</span>
-                          <span>{stageDetail.summativeScoreHistory[2] !== undefined ? `${stageDetail.summativeScoreHistory[2]}%` : '-'}</span>
+                          {[0, 1, 2].map((index) => {
+                            const attempt = stageDetail.summativeAttemptDetails[index]
+                            const scoreValue = stageDetail.summativeScoreHistory[index]
+                            const isActive = selectedTrial?.stage === stageDetail.stage && selectedTrial?.index === index
+                            const canSelect = Boolean(attempt && attempt.questionIds?.length)
+
+                            return (
+                              <button
+                                key={`${stageDetail.stage}-trial-${index}`}
+                                type="button"
+                                onClick={() => {
+                                  if (canSelect) {
+                                    setSelectedTrial({ stage: stageDetail.stage, index })
+                                  }
+                                }}
+                                disabled={!canSelect}
+                                className={`rounded-lg border px-2 py-1 transition ${isBrightMode ? 'border-gray-200' : 'border-slate-700'} ${
+                                  isActive
+                                    ? isBrightMode
+                                      ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                      : 'bg-blue-500/20 text-blue-200 border-blue-500/40'
+                                    : isBrightMode
+                                      ? 'bg-white text-gray-900 hover:bg-gray-50'
+                                      : 'bg-slate-900/40 text-slate-100 hover:bg-slate-800/60'
+                                } ${!canSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                {scoreValue !== undefined ? `${scoreValue}%` : '-'}
+                              </button>
+                            )
+                          })}
                         </div>
                       </dd>
                     </div>
                   </dl>
                 </article>
               ))}
+            </div>
+          ) : null}
+
+          {selectedTrial ? (
+            <div className={`mt-6 rounded-2xl border p-5 ${isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className={`text-sm font-bold uppercase tracking-[0.16em] ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
+                  Post-test Trial Details
+                </h4>
+                <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                  {selectedUserDetails.find((detail) => detail.stage === selectedTrial.stage)?.label} · Trial {selectedTrial.index + 1}
+                </span>
+              </div>
+
+              {!selectedTrialDetail ? (
+                <p className={`mt-3 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                  No saved responses for this trial.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {selectedTrialQuestions.map((question, index) => (
+                    <div
+                      key={`trial-question-${question.id}`}
+                      className={`rounded-xl border p-4 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700 bg-slate-950/40'}`}
+                    >
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                          Q{index + 1}
+                        </span>
+                        <span className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                          {question.module}
+                        </span>
+                      </div>
+                      <p className={`mt-2 text-sm font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{question.question}</p>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        <div className={`rounded-lg border px-3 py-2 text-xs ${isBrightMode ? 'border-gray-200 bg-white text-gray-700' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>
+                          <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>User Answer</p>
+                          <p className={`mt-1 text-sm ${question.selectedIndex === question.correctIndex ? 'text-emerald-600' : 'text-rose-500'}`}>
+                            {question.selectedIndex === undefined ? 'No answer' : question.options[question.selectedIndex]}
+                          </p>
+                        </div>
+                        <div className={`rounded-lg border px-3 py-2 text-xs ${isBrightMode ? 'border-gray-200 bg-white text-gray-700' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>
+                          <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Correct Answer</p>
+                          <p className="mt-1 text-sm text-emerald-600">{question.options[question.correctIndex]}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : null}
         </div>

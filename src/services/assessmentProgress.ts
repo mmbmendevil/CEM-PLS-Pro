@@ -33,11 +33,21 @@ export type AssessmentProgressInput = {
   failedAttempts?: number
   isLocked?: boolean
   scoreHistory?: number[]
+  summativeAttemptDetails?: SummativeAttemptDetail[]
 }
 
 export type AssessmentProgressRecord = AssessmentProgressInput & {
   updatedAt?: unknown
   passedAt?: unknown
+}
+
+export type SummativeAttemptDetail = {
+  score: number
+  totalItems: number
+  percentage: number
+  questionIds: number[]
+  selectedAnswers: Record<string, number>
+  submittedAt?: unknown
 }
 
 const ASSESSMENT_PROGRESS_COLLECTION = 'AssessmentProgress'

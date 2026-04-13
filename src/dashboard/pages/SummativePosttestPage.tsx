@@ -8,7 +8,7 @@ import { getLearningStageConfig, getStageDiagnosticRecord, getStageSummativeReco
 import { getDiagnosticQuestionsByIdsForStage, getWeightedSummativeQuestions } from '../data/diagnosticQuestions'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
-import { getUserAssessmentProgress, upsertAssessmentProgress } from '../../services/assessmentProgress'
+import { getUserAssessmentProgress, upsertAssessmentProgress, type SummativeAttemptDetail } from '../../services/assessmentProgress'
 
 const SUMMATIVE_PASSING_PERCENTAGE = 75
 const SUMMATIVE_ITEMS_PER_MODULE = 10
@@ -42,6 +42,7 @@ const SummativePosttestPage = () => {
   const [failedAttempts, setFailedAttempts] = useState(0)
   const [isPermanentlyLocked, setIsPermanentlyLocked] = useState(false)
   const [scoreHistory, setScoreHistory] = useState<number[]>([])
+  const [attemptDetails, setAttemptDetails] = useState<SummativeAttemptDetail[]>([])
 
   const currentQuestion = questions[currentQuestionIndex]
   const answeredCount = Object.keys(selectedAnswers).length
@@ -102,6 +103,9 @@ const SummativePosttestPage = () => {
           .map((value) => Number(value))
           .filter((value) => Number.isFinite(value))
         : []
+      const persistedAttemptDetails = Array.isArray(summativeRecord?.summativeAttemptDetails)
+        ? summativeRecord.summativeAttemptDetails.filter((entry) => entry && typeof entry === 'object')
+        : []
 
       setActiveStage(stage)
       setAssessmentKey(stageConfig.summativeAssessmentKey)
@@ -109,6 +113,7 @@ const SummativePosttestPage = () => {
       setFailedAttempts(persistedFailedAttempts)
       setIsPermanentlyLocked(isLockedForStage)
       setScoreHistory(persistedScoreHistory)
+      setAttemptDetails(persistedAttemptDetails)
 
       const baseQuestionIds = (diagnosticRecord?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId))
       const baseSelectedAnswers = Object.fromEntries(
@@ -249,6 +254,17 @@ const SummativePosttestPage = () => {
         : failedAttempts
       const lockedAfterSubmit = !passed && failedAttemptsAfterSubmit >= SUMMATIVE_MAX_FAILED_ATTEMPTS
       const scoreHistoryAfterSubmit = [...scoreHistory, scorePercentage]
+      const attemptDetailsAfterSubmit = [
+        ...attemptDetails,
+        {
+          score,
+          totalItems: questions.length,
+          percentage: scorePercentage,
+          questionIds: questions.map((question) => question.id),
+          selectedAnswers: selectedAnswersForStorage,
+          submittedAt: new Date(),
+        },
+      ]
 
       await upsertAssessmentProgress({
         uid,
@@ -266,11 +282,13 @@ const SummativePosttestPage = () => {
         failedAttempts: failedAttemptsAfterSubmit,
         isLocked: lockedAfterSubmit,
         scoreHistory: scoreHistoryAfterSubmit,
+        summativeAttemptDetails: attemptDetailsAfterSubmit,
       })
 
       setFailedAttempts(failedAttemptsAfterSubmit)
       setIsPermanentlyLocked(lockedAfterSubmit)
       setScoreHistory(scoreHistoryAfterSubmit)
+      setAttemptDetails(attemptDetailsAfterSubmit)
 
       navigate(ROUTE_PATHS.dashboard.results)
     } finally {

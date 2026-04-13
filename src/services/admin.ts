@@ -8,7 +8,7 @@ import {
   type LearningStageKey,
 } from '@/dashboard/data/learningStage'
 import { db } from '@/lib/firebase'
-import type { AssessmentProgressRecord } from '@/services/assessmentProgress'
+import type { AssessmentProgressRecord, SummativeAttemptDetail } from '@/services/assessmentProgress'
 import { getUserAssessmentProgress } from '@/services/assessmentProgress'
 import type { UserProfile, UserRole } from '@/services/userProfiles'
 
@@ -34,6 +34,7 @@ export type AdminUserStageDetail = {
   diagnosticScore: number | null
   summativeScore: number | null
   summativeScoreHistory: number[]
+  summativeAttemptDetails: SummativeAttemptDetail[]
   diagnosticStatus: 'Not Started' | 'In Progress' | 'Submitted'
   summativeStatus: 'Not Started' | 'In Progress' | 'Submitted'
   stageStatus: 'Not Started' | 'In Progress' | 'Passed' | 'Needs Improvement'
@@ -197,6 +198,9 @@ export const getAdminUserStageDetails = async (uid: string): Promise<AdminUserSt
         .map((value) => Number(value))
         .filter((value) => Number.isFinite(value))
       : []
+    const summativeAttemptDetails = Array.isArray(summativeRecord?.summativeAttemptDetails)
+      ? summativeRecord.summativeAttemptDetails.filter((entry) => entry && typeof entry === 'object')
+      : []
 
     return {
       stage,
@@ -204,6 +208,7 @@ export const getAdminUserStageDetails = async (uid: string): Promise<AdminUserSt
       diagnosticScore: Number.isFinite(Number(diagnosticRecord?.percentage)) ? Number(diagnosticRecord?.percentage) : null,
       summativeScore: Number.isFinite(Number(summativeRecord?.percentage)) ? Number(summativeRecord?.percentage) : null,
       summativeScoreHistory,
+      summativeAttemptDetails,
       diagnosticStatus,
       summativeStatus,
       stageStatus: resolveStageStatus(diagnosticStatus, summativeStatus, summativeRecord),
