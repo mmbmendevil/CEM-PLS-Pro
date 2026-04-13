@@ -115,6 +115,48 @@ const SummativePosttestPage = () => {
       setScoreHistory(persistedScoreHistory)
       setAttemptDetails(persistedAttemptDetails)
 
+      if (
+        uid &&
+        summativeRecord?.isSubmitted === true &&
+        persistedAttemptDetails.length === 0 &&
+        Array.isArray(summativeRecord?.questionIds) &&
+        summativeRecord.questionIds.length > 0 &&
+        summativeRecord.selectedAnswers &&
+        typeof summativeRecord.selectedAnswers === 'object'
+      ) {
+        const fallbackAttemptDetails: SummativeAttemptDetail[] = [
+          {
+            score: Number(summativeRecord.score ?? 0),
+            totalItems: Number(summativeRecord.totalItems ?? summativeRecord.questionIds.length),
+            percentage: Number(summativeRecord.percentage ?? 0),
+            questionIds: summativeRecord.questionIds.map((questionId) => Number(questionId)).filter((questionId) => Number.isFinite(questionId)),
+            selectedAnswers: Object.fromEntries(
+              Object.entries(summativeRecord.selectedAnswers).map(([questionId, answerIndex]) => [String(questionId), Number(answerIndex)]),
+            ),
+            submittedAt: summativeRecord.updatedAt ?? new Date(),
+          },
+        ]
+
+        await upsertAssessmentProgress({
+          uid,
+          assessmentKey: stageConfig.summativeAssessmentKey,
+          score: Number(summativeRecord.score ?? 0),
+          totalItems: Number(summativeRecord.totalItems ?? fallbackAttemptDetails[0].questionIds.length),
+          percentage: Number(summativeRecord.percentage ?? 0),
+          passed: summativeRecord.passed === true,
+          questionIds: fallbackAttemptDetails[0].questionIds,
+          selectedAnswers: fallbackAttemptDetails[0].selectedAnswers,
+          isSubmitted: true,
+          isFinished: true,
+          failedAttempts: persistedFailedAttempts,
+          isLocked: isLockedForStage,
+          scoreHistory: persistedScoreHistory,
+          summativeAttemptDetails: fallbackAttemptDetails,
+        })
+
+        setAttemptDetails(fallbackAttemptDetails)
+      }
+
       const baseQuestionIds = (diagnosticRecord?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId))
       const baseSelectedAnswers = Object.fromEntries(
         Object.entries(diagnosticRecord?.selectedAnswers ?? {}).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),

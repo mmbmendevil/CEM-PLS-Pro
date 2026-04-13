@@ -588,6 +588,9 @@ const AdminDashboardPage = () => {
                             )
                           })}
                         </div>
+                        <p className={`mt-2 text-[11px] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                          Trial Q&A is available only for attempts submitted after the Q&A tracking update.
+                        </p>
                       </dd>
                     </div>
                   </dl>
