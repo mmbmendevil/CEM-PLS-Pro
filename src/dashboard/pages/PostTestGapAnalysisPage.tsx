@@ -93,6 +93,7 @@ const PostTestGapAnalysisPage = () => {
   const [questionIds, setQuestionIds] = useState<number[]>([])
   const [activeStage, setActiveStage] = useState<LearningStageKey>('prelim')
   const [activeTab, setActiveTab] = useState<GapTabKey>('overview')
+  const [showPostTestQA, setShowPostTestQA] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -163,6 +164,24 @@ const PostTestGapAnalysisPage = () => {
     const stagePool = getDiagnosticQuestionPoolForStage(activeStage)
     return questionIds.length > 0 ? getDiagnosticQuestionsByIdsForStage(questionIds, activeStage) : stagePool
   }, [questionIds, activeStage])
+
+  const postTestQAItems = useMemo(() => {
+    return activeQuestions.map((question) => {
+      const selectedIndex = selectedAnswers[question.id]
+      const selectedText = selectedIndex !== undefined ? question.options[selectedIndex] : null
+      const correctText = question.options[question.correctAnswerIndex]
+      const isCorrect = selectedIndex === question.correctAnswerIndex
+
+      return {
+        id: question.id,
+        module: question.module,
+        question: question.question,
+        selectedText,
+        correctText,
+        isCorrect,
+      }
+    })
+  }, [activeQuestions, selectedAnswers])
 
   const radarData = useMemo(() => {
     const palette = [
@@ -685,8 +704,84 @@ const PostTestGapAnalysisPage = () => {
                       Go to Review Materials
                       <ArrowRight size={14} />
                     </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPostTestQA(true)}
+                      className="inline-flex items-center gap-2 h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20"
+                    >
+                      View Post-Test Q&A
+                      <ArrowRight size={14} />
+                    </button>
                   </div>
                 </div>
+                {showPostTestQA ? (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                      className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+                      onClick={() => setShowPostTestQA(false)}
+                      role="presentation"
+                    />
+                    <div
+                      role="dialog"
+                      aria-modal="true"
+                      className={`relative w-[min(980px,92vw)] max-h-[85vh] overflow-hidden rounded-[2.5rem] border shadow-2xl ${isBrightMode ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-slate-100'}`}
+                    >
+                      <div className="flex items-start justify-between gap-4 p-6 md:p-8 border-b border-slate-200/40 dark:border-slate-700/60">
+                        <div>
+                          <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${mutedText}`}>Previous Post-Test</p>
+                          <h3 className={`mt-3 text-2xl font-black tracking-tight ${highlightText}`}>Your Questions & Answers</h3>
+                          <p className={`mt-2 text-sm ${mutedText}`}>Review what you answered and compare with the correct response.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowPostTestQA(false)}
+                          className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="p-6 md:p-8 overflow-y-auto max-h-[70vh]">
+                        {postTestQAItems.length === 0 ? (
+                          <div className={`rounded-2xl border px-4 py-3 text-sm ${isBrightMode ? 'border-slate-200 bg-slate-50 text-slate-600' : 'border-slate-700 bg-slate-800/60 text-slate-300'}`}>
+                            No post-test responses available yet.
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {postTestQAItems.map((item, index) => (
+                              <div
+                                key={`posttest-qa-${item.id}`}
+                                className={`rounded-2xl border p-4 ${isBrightMode ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800/60'}`}
+                              >
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${mutedText}`}>Q{index + 1}</span>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCorrect ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {item.isCorrect ? 'Correct' : 'Needs Review'}
+                                  </span>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${mutedText}`}>{item.module}</span>
+                                </div>
+                                <p className={`mt-2 text-sm font-semibold ${highlightText}`}>{item.question}</p>
+                                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                                  <div className={`rounded-xl border px-3 py-2 text-xs ${isBrightMode ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>
+                                    <p className={`text-[10px] font-black uppercase tracking-widest ${mutedText}`}>Your Answer</p>
+                                    <p className={`mt-1 text-sm ${item.isCorrect ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                      {item.selectedText ?? 'No answer selected'}
+                                    </p>
+                                  </div>
+                                  <div className={`rounded-xl border px-3 py-2 text-xs ${isBrightMode ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>
+                                    <p className={`text-[10px] font-black uppercase tracking-widest ${mutedText}`}>Correct Answer</p>
+                                    <p className="mt-1 text-sm text-emerald-500">{item.correctText}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </section>
             ) : null}
           </div>
