@@ -179,6 +179,7 @@ const Sidebar = () => {
   const { selectedStage, setSelectedStage } = useGradingStage()
   const [resolvedStage, setResolvedStage] = useState<LearningStageKey>('prelim')
   const [isGapAnalysisUnlocked, setIsGapAnalysisUnlocked] = useState(false)
+  const [isPostTestGapAnalysisUnlocked, setIsPostTestGapAnalysisUnlocked] = useState(false)
   const [isDiagnosticUnlocked, setIsDiagnosticUnlocked] = useState(false)
   const [isStudyPlanUnlocked, setIsStudyPlanUnlocked] = useState(false)
   const [isReviewUnlocked, setIsReviewUnlocked] = useState(false)
@@ -199,6 +200,7 @@ const Sidebar = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setIsGapAnalysisUnlocked(false)
+        setIsPostTestGapAnalysisUnlocked(false)
         setIsDiagnosticUnlocked(false)
         setIsStudyPlanUnlocked(false)
         setIsReviewUnlocked(false)
@@ -243,6 +245,10 @@ const Sidebar = () => {
 
       setIsDiagnosticUnlocked(areStageModulesCompleted(moduleRecords, displayedStage))
       setIsGapAnalysisUnlocked(displayedStageRecord?.isSubmitted === true || displayedStageRecord?.isFinished === true)
+      setIsPostTestGapAnalysisUnlocked(
+        (displayedStageSummativeRecord?.isSubmitted === true || displayedStageSummativeRecord?.isFinished === true) && 
+        displayedStageSummativeRecord?.passed === false
+      )
       setIsStudyPlanUnlocked(displayedStageRecord?.isStudyPlanUnlocked === true)
       setIsReviewUnlocked(displayedStageRecord?.isReviewUnlocked === true)
       setIsSummativeUnlocked(displayedStageRecord?.isReviewUnlocked === true)
@@ -275,6 +281,7 @@ const Sidebar = () => {
   const isModulesActive = location.pathname === ROUTE_PATHS.dashboard.modules
   const isDiagnosticActive = location.pathname === ROUTE_PATHS.dashboard.diagnostic
   const isGapAnalysisActive = location.pathname === ROUTE_PATHS.dashboard.gapAnalysis
+  const isPostTestGapAnalysisActive = location.pathname === ROUTE_PATHS.dashboard.postTestGapAnalysis
   const isStudyPlanActive = location.pathname === ROUTE_PATHS.dashboard.studyPlan
   const isReviewActive =
     location.pathname === ROUTE_PATHS.dashboard.review ||
@@ -488,6 +495,20 @@ const Sidebar = () => {
               isCollapsed={isCollapsed}
               isBrightMode={isBrightMode}
             />
+            {isPostTestGapAnalysisUnlocked && (
+              <NavItem
+                icon={<BrainCircuit size={20} />}
+                label="Post-Test Gap Analysis"
+                isActive={isPostTestGapAnalysisActive}
+                isUnlocked={isPostTestGapAnalysisUnlocked}
+                isLocked={false}
+                subtitle={isPostTestGapAnalysisUnlocked ? 'FAILED TEST' : 'LOCKED'}
+                statusIcon={isPostTestGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={isPostTestGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.postTestGapAnalysis : undefined}
+                isCollapsed={isCollapsed}
+                isBrightMode={isBrightMode}
+              />
+            )}
             <NavItem
               icon={<BarChart size={20} />}
               label="Learning Results"

@@ -8,6 +8,7 @@ import CoursesPage from '../dashboard/pages/CoursesPage'
 import DashboardPage from '../dashboard/pages/DashboardPage'
 import DiagnosticPretestPage from '../dashboard/pages/DiagnosticPretestPage'
 import GapAnalysisPage from '../dashboard/pages/GapAnalysisPage'
+import PostTestGapAnalysisPage from '../dashboard/pages/PostTestGapAnalysisPage'
 import LearningResultsPage from '../dashboard/pages/LearningResultsPage'
 import CertificationPage from '../dashboard/pages/CertificationPage'
 import ModuleViewerPage from '../dashboard/pages/ModuleViewerPage'
@@ -270,6 +271,10 @@ const AppRoutes = () => {
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
           }
+        />
+        <Route
+          path="post-test-gap-analysis"
+          element={user ? <PostTestGapAnalysisPage /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
         />
         <Route
           path="learning-results"

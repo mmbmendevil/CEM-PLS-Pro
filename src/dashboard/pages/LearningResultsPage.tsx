@@ -293,12 +293,20 @@ const LearningResultsPage = () => {
 
            <div className="flex flex-col sm:flex-row gap-4 pt-4">
             {!passed && (
-              <Link
-                to={ROUTE_PATHS.dashboard.review}
-                className={`h-14 px-10 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-[0.2em] inline-flex items-center gap-3 ${isBrightMode ? 'border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-900' : 'border-white/30 bg-white/5 hover:bg-white/10 text-white'}`}
-              >
-                <BookOpen size={16} /> Review
-              </Link>
+              <>
+                <Link
+                  to={ROUTE_PATHS.dashboard.postTestGapAnalysis}
+                  className={`h-14 px-10 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-[0.2em] inline-flex items-center gap-3 ${isBrightMode ? 'border-blue-300 bg-blue-100 hover:bg-blue-200 text-blue-900' : 'border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400'}`}
+                >
+                  <Target size={16} /> Gap Analysis
+                </Link>
+                <Link
+                  to={ROUTE_PATHS.dashboard.review}
+                  className={`h-14 px-10 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-[0.2em] inline-flex items-center gap-3 ${isBrightMode ? 'border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-900' : 'border-white/30 bg-white/5 hover:bg-white/10 text-white'}`}
+                >
+                  <BookOpen size={16} /> Review
+                </Link>
+              </>
             )}
 
               {passed ? (

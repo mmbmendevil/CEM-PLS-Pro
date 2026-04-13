@@ -16,6 +16,7 @@ export const ROUTE_PATHS = {
     diagnostic: '/dashboard/prelim',
     diagnosticLegacy: '/dashboard/diagnostic-pretest',
     gapAnalysis: '/dashboard/gap-analysis',
+    postTestGapAnalysis: '/dashboard/post-test-gap-analysis',
     studyPlan: '/dashboard/personalized-study-plan',
     review: '/dashboard/review',
     reviewFlashcards: '/dashboard/review/flashcards',
