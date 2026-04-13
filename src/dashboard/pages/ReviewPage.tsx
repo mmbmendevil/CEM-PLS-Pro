@@ -1,11 +1,11 @@
 import { onAuthStateChanged } from 'firebase/auth'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Sparkles, X, RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBrightness } from '../../contexts/BrightnessContext'
 import { useGradingStage } from '@/contexts/GradingStageContext'
-import { getStageDiagnosticRecord, resolveStageForSelection } from '../data/learningStage'
+import { getLearningStageConfig, getStageDiagnosticRecord, resolveStageForSelection } from '../data/learningStage'
 import {
   getDiagnosticQuestionPoolForStage,
   getDiagnosticQuestionsByIdsForStage,
@@ -13,7 +13,7 @@ import {
 } from '../data/diagnosticQuestions'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
-import { getUserAssessmentProgress } from '../../services/assessmentProgress'
+import { getUserAssessmentProgress, saveReviewerNarrationScript, upsertAssessmentProgress, type AssessmentProgressRecord } from '../../services/assessmentProgress'
 
 const preferenceLabels: Record<string, string> = {
   flashcards: 'Flashcards',
@@ -37,6 +37,7 @@ const ReviewPage = () => {
   const { isBrightMode } = useBrightness()
   const { selectedStage } = useGradingStage()
   const location = useLocation()
+  const navigate = useNavigate()
   const [uid, setUid] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [reviewerOutput, setReviewerOutput] = useState('')
@@ -47,6 +48,8 @@ const ReviewPage = () => {
   const [isReviewUnlocked, setIsReviewUnlocked] = useState(false)
   const [selectedModuleDeck, setSelectedModuleDeck] = useState<string | null>(null)
   const [selectedCardIndex, setSelectedCardIndex] = useState(0)
+  const [diagnosticRecord, setDiagnosticRecord] = useState<AssessmentProgressRecord | null>(null)
+  const [isResettingReviewer, setIsResettingReviewer] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -80,6 +83,7 @@ const ReviewPage = () => {
       const record = getStageDiagnosticRecord(assessmentMap, activeStage)
 
       setActiveStage(activeStage)
+      setDiagnosticRecord(record ?? null)
       setReviewerOutput(record?.aiReviewerOutput?.trim() ?? '')
       setReviewerPreference(preferenceLabels[record?.reviewerPreference ?? ''] ?? 'Not set')
       setQuestionIds((record?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId)))
@@ -209,6 +213,50 @@ const ReviewPage = () => {
   const heading = isBrightMode ? 'text-slate-900' : 'text-slate-100'
   const redirectNotice = (location.state as { redirectNotice?: string } | null)?.redirectNotice ?? ''
 
+  const handleResetReviewer = async () => {
+    if (!uid || !diagnosticRecord || isResettingReviewer) {
+      return
+    }
+
+    setIsResettingReviewer(true)
+    const assessmentKey = getLearningStageConfig(activeStage).diagnosticAssessmentKey
+
+    try {
+      await saveReviewerNarrationScript({ uid, assessmentKey, script: '' })
+      await upsertAssessmentProgress({
+        uid,
+        assessmentKey,
+        score: diagnosticRecord.score ?? 0,
+        totalItems: diagnosticRecord.totalItems ?? 0,
+        percentage: diagnosticRecord.percentage ?? 0,
+        passed: diagnosticRecord.passed === true,
+        aiReviewerOutput: '',
+        reviewerNarrationStorage: 'inline',
+        reviewerNarrationChunkCount: 0,
+        isReviewUnlocked: false,
+        reviewerPreference: diagnosticRecord.reviewerPreference,
+        competencyBreakdown: diagnosticRecord.competencyBreakdown,
+        questionIds: diagnosticRecord.questionIds,
+        selectedAnswers: diagnosticRecord.selectedAnswers,
+        currentQuestionIndex: diagnosticRecord.currentQuestionIndex,
+        isStudyPlanUnlocked: diagnosticRecord.isStudyPlanUnlocked,
+        isSubmitted: diagnosticRecord.isSubmitted,
+        isFinished: diagnosticRecord.isFinished,
+        failedAttempts: diagnosticRecord.failedAttempts,
+        isLocked: diagnosticRecord.isLocked,
+        scoreHistory: diagnosticRecord.scoreHistory,
+      })
+
+      navigate(ROUTE_PATHS.dashboard.studyPlan, {
+        state: {
+          redirectNotice: 'Reviewer cleared. Choose a format and create a new one.',
+        },
+      })
+    } finally {
+      setIsResettingReviewer(false)
+    }
+  }
+
   if (isLoading) {
     return <section className={`rounded-3xl border p-10 text-lg ${surface}`}>Loading review page...</section>
   }
@@ -250,13 +298,24 @@ const ReviewPage = () => {
             <h1 className={`mt-2 text-4xl md:text-5xl font-black ${heading}`}>Prioritized Review Flow</h1>
             <p className={`mt-2 ${muted}`}>Format: {reviewerPreference}</p>
           </div>
-          <Link
-            to={ROUTE_PATHS.dashboard.studyPlan}
-            className={`inline-flex h-12 items-center gap-2 rounded-xl px-6 text-xs font-black uppercase tracking-widest ${isBrightMode ? 'bg-slate-100 text-slate-800 hover:bg-slate-200' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
-          >
-            <ArrowLeft size={14} />
-            Back to Plan
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleResetReviewer}
+              disabled={isResettingReviewer || !diagnosticRecord}
+              className={`inline-flex h-12 items-center gap-2 rounded-xl px-6 text-xs font-black uppercase tracking-widest ${isBrightMode ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 border border-rose-500/40'} ${isResettingReviewer || !diagnosticRecord ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <RotateCcw size={14} />
+              {isResettingReviewer ? 'Resetting...' : 'Create New Reviewer'}
+            </button>
+            <Link
+              to={ROUTE_PATHS.dashboard.studyPlan}
+              className={`inline-flex h-12 items-center gap-2 rounded-xl px-6 text-xs font-black uppercase tracking-widest ${isBrightMode ? 'bg-slate-100 text-slate-800 hover:bg-slate-200' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+            >
+              <ArrowLeft size={14} />
+              Back to Plan
+            </Link>
+          </div>
         </div>
 
         {reviewerPreference === 'Flashcards' ? (
