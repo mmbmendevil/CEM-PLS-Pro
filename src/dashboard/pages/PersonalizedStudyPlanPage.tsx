@@ -37,7 +37,7 @@ type InitStep = {
 }
 
 const initSteps: InitStep[] = [
-  { id: 1, label: 'Reading diagnostic result set' },
+  { id: 1, label: 'Reading assessment result set' },
   { id: 2, label: 'Basing users learning performance' },
   { id: 3, label: 'Building reviewer payload' },
   { id: 4, label: 'Finalizing reviewer output' },
@@ -96,6 +96,7 @@ const PersonalizedStudyPlanPage = () => {
   const [aiReviewer, setAiReviewer] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [diagnosticRecord, setDiagnosticRecord] = useState<AssessmentProgressRecord | null>(null)
+  const [reviewerSourceRecord, setReviewerSourceRecord] = useState<AssessmentProgressRecord | null>(null)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -131,21 +132,22 @@ const PersonalizedStudyPlanPage = () => {
       const diagnosticRecord = getStageDiagnosticRecord(assessmentMap, activeStage)
       const summativeRecord = getStageSummativeRecord(assessmentMap, activeStage)
       const hasSummative = Boolean(summativeRecord?.isSubmitted === true || summativeRecord?.isFinished === true)
-      const reviewerSourceRecord = hasSummative ? summativeRecord : diagnosticRecord
+      const nextReviewerSourceRecord = hasSummative ? summativeRecord : diagnosticRecord
       setActiveStage(activeStage)
       setAssessmentKey(activeStageConfig.diagnosticAssessmentKey)
 
       setDiagnosticRecord(diagnosticRecord ?? null)
+      setReviewerSourceRecord(nextReviewerSourceRecord ?? diagnosticRecord ?? null)
       setIsUnlocked(diagnosticRecord?.isStudyPlanUnlocked === true)
-      setScore(reviewerSourceRecord?.score ?? 0)
-      setTotalItems(reviewerSourceRecord?.totalItems ?? getDiagnosticQuestionPoolForStage(activeStage).length)
-      setPercentage(reviewerSourceRecord?.percentage ?? 0)
+      setScore(nextReviewerSourceRecord?.score ?? 0)
+      setTotalItems(nextReviewerSourceRecord?.totalItems ?? getDiagnosticQuestionPoolForStage(activeStage).length)
+      setPercentage(nextReviewerSourceRecord?.percentage ?? 0)
       setPassedPretest(diagnosticRecord?.passed === true)
 
-      const reviewerQuestionIds = (reviewerSourceRecord?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId))
+      const reviewerQuestionIds = (nextReviewerSourceRecord?.questionIds ?? []).map(Number).filter((questionId) => Number.isFinite(questionId))
       const reviewerSelectedAnswers = normalizeSelectedAnswersForStage(
         Object.fromEntries(
-          Object.entries(reviewerSourceRecord?.selectedAnswers ?? {}).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),
+          Object.entries(nextReviewerSourceRecord?.selectedAnswers ?? {}).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),
         ),
         activeStage,
       )
@@ -155,7 +157,7 @@ const PersonalizedStudyPlanPage = () => {
         : getDiagnosticQuestionPoolForStage(activeStage)
 
       setCompetencyBreakdown(
-        reviewerSourceRecord?.competencyBreakdown ?? buildCompetencyBreakdown(reviewerQuestions, reviewerSelectedAnswers),
+        nextReviewerSourceRecord?.competencyBreakdown ?? buildCompetencyBreakdown(reviewerQuestions, reviewerSelectedAnswers),
       )
       setQuestionIds(reviewerQuestionIds)
       setSelectedAnswers(reviewerSelectedAnswers)
@@ -286,12 +288,8 @@ const PersonalizedStudyPlanPage = () => {
     setPhase('initializing')
     setActiveStep(0)
 
-    const storageSelectedAnswers = diagnosticRecord?.selectedAnswers ?? Object.fromEntries(
-      Object.entries(selectedAnswers).map(([questionId, answerIndex]) => [String(questionId), answerIndex]),
-    )
-    const storageQuestionIds = diagnosticRecord?.questionIds ?? questionIds
     const selectedAnswersForStorage = Object.fromEntries(
-      Object.entries(storageSelectedAnswers).map(([questionId, answerIndex]) => [String(questionId), Number(answerIndex)]),
+      Object.entries(selectedAnswers).map(([questionId, answerIndex]) => [String(questionId), Number(answerIndex)]),
     )
 
     const start = Date.now()
@@ -373,16 +371,16 @@ const PersonalizedStudyPlanPage = () => {
       await upsertAssessmentProgress({
         uid,
         assessmentKey,
-        score: diagnosticRecord?.score ?? score,
-        totalItems: diagnosticRecord?.totalItems ?? totalItems,
-        percentage: diagnosticRecord?.percentage ?? percentage,
+        score: reviewerSourceRecord?.score ?? score,
+        totalItems: reviewerSourceRecord?.totalItems ?? totalItems,
+        percentage: reviewerSourceRecord?.percentage ?? percentage,
         passed: diagnosticRecord?.passed === true,
         aiReviewerOutput: reviewerPreference === 'flashcards' ? reviewerOutput : undefined,
         isStudyPlanUnlocked: true,
         isReviewUnlocked: true,
         reviewerPreference,
-        competencyBreakdown: diagnosticRecord?.competencyBreakdown ?? competencyBreakdown,
-        questionIds: storageQuestionIds,
+        competencyBreakdown: reviewerSourceRecord?.competencyBreakdown ?? competencyBreakdown,
+        questionIds,
         selectedAnswers: selectedAnswersForStorage,
         isSubmitted: diagnosticRecord?.isSubmitted ?? true,
         isFinished: diagnosticRecord?.isFinished ?? true,
