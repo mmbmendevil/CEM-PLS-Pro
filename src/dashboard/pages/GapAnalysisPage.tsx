@@ -20,7 +20,7 @@ import { useGradingStage } from '@/contexts/GradingStageContext'
 import { getLearningStageConfig, getStageDiagnosticRecord, hasReviewerForStage, resolveStageForSelection, type LearningStageKey } from '../data/learningStage'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
-import { getUserAssessmentProgress, upsertAssessmentProgress } from '../../services/assessmentProgress'
+import { generateResult, getUserAssessmentProgress, upsertAssessmentProgress } from '../../services/assessmentProgress'
 import { getDiagnosticQuestionPoolForStage, getDiagnosticQuestionsByIdsForStage, normalizeSelectedAnswersForStage } from '../data/diagnosticQuestions'
 const GAP_ANALYSIS_PASSING_PERCENTAGE = 75
 
@@ -157,14 +157,6 @@ const GapAnalysisPage = () => {
     }
   }, [uid, selectedStage])
 
-  const wrongAnswers = useMemo(() => {
-    if (!totalItems) {
-      return 0
-    }
-
-    return Math.max(totalItems - score, 0)
-  }, [score, totalItems])
-
   const activeQuestions = useMemo(() => {
     const stagePool = getDiagnosticQuestionPoolForStage(activeStage)
     return questionIds.length > 0 ? getDiagnosticQuestionsByIdsForStage(questionIds, activeStage) : stagePool
@@ -223,6 +215,27 @@ const GapAnalysisPage = () => {
   const computedPercentage = useMemo(() => {
     return toPercentage(score, totalItems)
   }, [score, totalItems])
+
+  const correct = score
+  const total = totalItems
+
+  const responses = useMemo(() => {
+    return activeQuestions.map((question) => ({
+      question_id: question.id,
+      correctness: selectedAnswers[question.id] === question.correctAnswerIndex ? 1 : 0,
+    }))
+  }, [activeQuestions, selectedAnswers])
+
+  const mapping = useMemo(() => {
+    return activeQuestions.map((question) => ({
+      question_id: question.id,
+      competency_id: question.competencyCode,
+    }))
+  }, [activeQuestions])
+
+  const result = useMemo(() => {
+    return generateResult(correct, total, responses, mapping)
+  }, [correct, total, responses, mapping])
 
   const chartPeak = useMemo(() => {
     return Math.max(100, ...radarData.map((entry) => entry.percent))
@@ -379,6 +392,10 @@ const GapAnalysisPage = () => {
     )
   }
 
+  if (!result) {
+    return null
+  }
+
   return (
     <main className={`flex-1 overflow-y-auto selection:bg-indigo-500/30 rounded-4xl border ${pageSurface} ${isBrightMode ? 'border-amber-100/80' : 'border-slate-700/60'}`}>
       <div className="max-w-350 mx-auto px-4 sm:px-8 lg:px-12 py-8 pb-32">
@@ -434,28 +451,28 @@ const GapAnalysisPage = () => {
                     value={isQualified ? 'Qualified' : 'Not Qualified'}
                     color={isQualified ? 'text-emerald-600' : 'text-rose-500'}
                   />
-                  <Badge label="Knowledge Gaps" value={`${wrongAnswers} topics`} color={highlightText} />
+                  <Badge label="Knowledge Gaps" value={`${result.knowledge_gaps}`} color={highlightText} />
                 </div>
               </div>
 
               <div className={`flex flex-col sm:flex-row items-center gap-8 p-8 rounded-[2.5rem] border shrink-0 ${softSurface}`}>
                 <div className="flex flex-col items-center gap-2">
                   <div className={`h-28 w-28 rounded-full shadow-xl flex flex-col items-center justify-center text-white border-4 ${isBrightMode ? 'bg-linear-to-br from-blue-600 to-indigo-600 border-white/90 shadow-blue-500/20' : 'bg-indigo-600 border-indigo-100 dark:border-indigo-900/50'}`}>
-                    <span className="text-3xl font-black">{formatPercentage(computedPercentage)}%</span>
+                    <span className="text-3xl font-black">{result.percentage.toFixed(0) + '%'}</span>
                   </div>
                   <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Score</p>
                 </div>
                 <div className={`hidden sm:block h-20 w-px ${isBrightMode ? 'bg-amber-100' : 'bg-slate-700'}`}></div>
                 <div className="text-center sm:text-left">
                   <h3 className={`text-3xl font-black tracking-tighter ${highlightText}`}>
-                    {score} <span className={isBrightMode ? 'text-xl text-slate-500' : 'text-xl text-slate-500'}>/ {totalItems || 1}</span>
+                    {result.score + '/' + total}
                   </h3>
                   <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Correct</p>
                 </div>
                 <div className={`hidden sm:block h-20 w-px ${isBrightMode ? 'bg-amber-100' : 'bg-slate-700'}`}></div>
                 <div className="text-center sm:text-left">
                   <div className="flex items-baseline justify-center sm:justify-start gap-2">
-                    <span className={`text-3xl font-black tracking-tighter ${highlightText}`}>--</span>
+                    <span className={`text-3xl font-black tracking-tighter ${highlightText}`}>{result.theta === null ? '--' : result.theta.toFixed(2)}</span>
                     <span className={isBrightMode ? 'text-base font-bold text-blue-600' : 'text-base font-bold text-indigo-500'}>theta</span>
                   </div>
                   <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Ability (IRT)</p>

@@ -252,3 +252,135 @@ export const loadReviewerNarrationScript = async ({
 
   return orderedChunks.join('')
 }
+
+const computeTheta = (correct: number, total: number) => {
+  if (correct === undefined || total === undefined) {
+    return null
+  }
+
+  if (correct === 0 || correct === total) {
+    return null
+  }
+
+  return Math.log(correct / (total - correct))
+}
+
+const computeCompetencies = (
+  responses:
+    | Array<{
+        question_id: string | number
+        correctness: number
+      }>
+    | undefined,
+  mapping:
+    | Array<{
+        question_id: string | number
+        competency_id: string
+      }>
+    | undefined,
+) => {
+  if (responses == null || mapping == null) {
+    return null
+  }
+
+  const questionToCompetency = new Map<string | number, string>()
+  for (const entry of mapping) {
+    questionToCompetency.set(entry.question_id, entry.competency_id)
+  }
+
+  const competencyAgg = new Map<
+    string,
+    {
+      correct_count: number
+      total_items: number
+    }
+  >()
+
+  for (const response of responses) {
+    const competencyId = questionToCompetency.get(response.question_id)
+    if (competencyId === undefined) {
+      continue
+    }
+
+    const current = competencyAgg.get(competencyId) ?? { correct_count: 0, total_items: 0 }
+    current.correct_count += response.correctness
+    current.total_items += 1
+    competencyAgg.set(competencyId, current)
+  }
+
+  return Array.from(competencyAgg.entries()).map(([competency_id, agg]) => ({
+    competency_id,
+    correct_count: agg.correct_count,
+    total_items: agg.total_items,
+    performance: agg.correct_count / agg.total_items,
+  }))
+}
+
+const computeGaps = (
+  competencies:
+    | Array<{
+        competency_id: string
+        correct_count: number
+        total_items: number
+        performance: number
+      }>
+    | undefined,
+  threshold = 0.75,
+) => {
+  if (competencies == null) {
+    return null
+  }
+
+  return competencies
+    .filter((entry) => entry.performance < threshold)
+    .map((entry) => ({
+      competency_id: entry.competency_id,
+      performance: entry.performance,
+      deviation: threshold - entry.performance,
+    }))
+    .sort((a, b) => b.deviation - a.deviation)
+}
+
+const generateResult = (
+  correct: number,
+  total: number,
+  responses:
+    | Array<{
+        question_id: string | number
+        correctness: number
+      }>
+    | undefined,
+  mapping:
+    | Array<{
+        question_id: string | number
+        competency_id: string
+      }>
+    | undefined,
+) => {
+  if (correct === undefined || total === undefined || responses == null || mapping == null) {
+    return null
+  }
+
+  const score = correct
+  const percentage = (correct / total) * 100
+  const theta = computeTheta(correct, total)
+  const competencies = computeCompetencies(responses, mapping)
+  if (competencies === null) {
+    return null
+  }
+
+  const gaps = computeGaps(competencies)
+  if (gaps === null) {
+    return null
+  }
+
+  return {
+    score,
+    percentage,
+    theta,
+    gaps,
+    knowledge_gaps: gaps.length,
+  }
+}
+
+export { computeTheta, computeCompetencies, computeGaps, generateResult }
