@@ -81,7 +81,7 @@ This document is generated strictly from the current codebase. Any information n
 | NOT SPECIFIED IN SYSTEM | Diagnostic pre-test question selection | Diagnostic Question Dataset | Group-by module then `shuffle(...).slice(itemsPerModule)` | Diagnostic question pools by stage | `src/dashboard/data/diagnosticQuestions.ts:getRandomDiagnosticPretestQuestions` |
 | NOT SPECIFIED IN SYSTEM | Diagnostic scoring | Diagnostic Pre-test Page | `score = count(selected==correct)`; `percentage = (score/total)*100` | `selectedAnswers`, `questions[]` | `src/dashboard/pages/DiagnosticPretestPage.tsx` |
 | NOT SPECIFIED IN SYSTEM | Competency breakdown per diagnostic | Diagnostic Pre-test Page | Bucket by `competencyCode` and compute per-bucket percentage | `questions[].competencyCode`, `selectedAnswers` | `src/dashboard/pages/DiagnosticPretestPage.tsx` |
-| NOT SPECIFIED IN SYSTEM | Pre-test gap analysis + IRT theta output | Gap Analysis Page + generateResult | Gap aggregation from mapped (question→competency) responses, theta = `log(correct/(total-correct))` if interior | `correct`, `total`, computed `responses`, computed `mapping` | `src/services/assessmentProgress.ts:generateResult`, `src/dashboard/pages/GapAnalysisPage.tsx` |
+| NOT SPECIFIED IN SYSTEM | Pre-test gap analysis metrics (theta computed; not displayed in UI) | Gap Analysis Page + generateResult | Gap aggregation from mapped (question→competency) responses, theta = `log(correct/(total-correct))` if interior | `correct`, `total`, computed `responses`, computed `mapping` | `src/services/assessmentProgress.ts:generateResult`, `src/dashboard/pages/GapAnalysisPage.tsx` |
 | NOT SPECIFIED IN SYSTEM | Personalized reviewer generation (AI) | Personalized Study Plan Page + OpenAI proxy | Build prompt (wrong/unseen/correct), send chat request, fallback if empty/error | Diagnostic record, selected answers, competency breakdown | `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts`, `src/services/openai.ts`, `vite.config.ts` |
 | NOT SPECIFIED IN SYSTEM | Save/stream long reviewer scripts | Assessment Progress Service | Inline storage if length ≤ 90000 chars else chunk into docs sized 18000 chars | Firestore `ReviewerNarrationChunks` subcollection | `src/services/assessmentProgress.ts:saveReviewerNarrationScript` |
 | NOT SPECIFIED IN SYSTEM | Summative post-test adaptive question set | Diagnostic Question Dataset | Weighted sort per module: unseen first, then wrong, then random | Diagnostic question pool; diagnostic answers | `src/dashboard/data/diagnosticQuestions.ts:getWeightedSummativeQuestions` |
@@ -571,8 +571,8 @@ This document is generated strictly from the current codebase. Any information n
   - On “Analyze Concepts” action, set `isStudyPlanUnlocked: true` and mark record submitted/finished.
   - Compute dynamic metrics from `generateResult`:
     - percentage display
-    - theta display
     - knowledge gap count
+  - IRT/theta is computed in `generateResult` but is not shown in the Gap Analysis UI.
 - Inputs (source + format):
   - Diagnostic record fields: `score`, `totalItems`, `questionIds`, `selectedAnswers` — `src/services/assessmentProgress.ts`
   - Stage question pool for mapping question → competency — `src/dashboard/data/diagnosticQuestions.ts`
@@ -698,6 +698,7 @@ This document is generated strictly from the current codebase. Any information n
 - Purpose: Provide gap visualization and review of Q/A after summative completion (particularly when failed).
 - Responsibilities:
   - Load summative record for stage and compute chart datasets by competency correctness.
+  - Compute weak competency count by grouping questions by `competencyCode` and flagging any competency with mastery `< 75%` (displayed as “Weak Competencies”).
   - Provide per-question Q/A review list derived from selected answers.
 - Inputs (source + format):
   - Summative record fields: score, totalItems, questionIds, selectedAnswers — `src/services/assessmentProgress.ts`
@@ -1184,7 +1185,7 @@ Source reference: `src/routes/AppRoutes.tsx`, `src/routes/paths.ts`
 - Processing:
   - Compute `result = generateResult(correct, total, responses, mapping)` — `src/services/assessmentProgress.ts`
 - Output:
-  - `percentage`, `theta`, and `knowledge_gaps` displayed in UI — `src/dashboard/pages/GapAnalysisPage.tsx`
+  - `percentage` and `knowledge_gaps` displayed in UI (theta computed but not displayed) — `src/dashboard/pages/GapAnalysisPage.tsx`
 
 #### 12.3 Recommendation (Reviewer / Study Plan)
 - Input:
@@ -1376,7 +1377,7 @@ The items below are based on concrete implementation details in the repository:
   - Diagnostic pools use codes such as `CM`, `AF`, `PA` — `src/dashboard/data/diagnosticQuestions.ts`
 - Theta computation differs across pages:
   - Dashboard uses a linear transform of percentage for theta-like display — `src/dashboard/pages/DashboardPage.tsx`
-  - Gap Analysis uses `generateResult` theta (logit) — `src/services/assessmentProgress.ts`, `src/dashboard/pages/GapAnalysisPage.tsx`
+  - Gap Analysis uses `generateResult` theta (logit), but the theta UI is removed from gap analysis pages — `src/services/assessmentProgress.ts`, `src/dashboard/pages/GapAnalysisPage.tsx`, `src/dashboard/pages/PostTestGapAnalysisPage.tsx`
 
 ---
 
@@ -1389,7 +1390,7 @@ The items below are based on concrete implementation details in the repository:
 | Module viewing + progress | `src/dashboard/pages/ModuleViewerPage.tsx`, `src/services/moduleProgress.ts` | Weighted overall progress + debounce | `userProfiles/{uid}/ModuleProgress/{moduleId}` | Firestore (SDK) |
 | Stage gating | `src/dashboard/data/learningStage.ts`, `src/routes/AppRoutes.tsx` | Resolve stage + gate redirects | Assessment progress records by key | Firestore (SDK) |
 | Diagnostic pre-test | `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts` | Random selection per module bucket + scoring | `AssessmentProgress/{diagnosticKey}` | Firestore (SDK) |
-| Gap analysis metrics | `src/dashboard/pages/GapAnalysisPage.tsx`, `src/services/assessmentProgress.ts` | `generateResult` (theta + gaps) | Reads diagnostic record; uses derived mapping | Firestore (SDK) |
+| Gap analysis metrics | `src/dashboard/pages/GapAnalysisPage.tsx`, `src/services/assessmentProgress.ts` | `generateResult` (gaps; theta computed) | Reads diagnostic record; uses derived mapping | Firestore (SDK) |
 | Reviewer generation | `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts` | Prompt build + AI call + fallback + script chunking | `AssessmentProgress` + optional `ReviewerNarrationChunks` | `/api/openai/chat` (POST) |
 | Review modes | `src/dashboard/pages/*ReviewPage.tsx` | Wrong/unseen/correct ordering; chapter parsing; Q/A parsing | Reviewer script loaded from Firestore | Firestore (SDK) |
 | Summative post-test | `src/dashboard/pages/SummativePosttestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts` | Weighted summative selection + attempt lock | `AssessmentProgress/{summativeKey}` | Firestore (SDK) |
