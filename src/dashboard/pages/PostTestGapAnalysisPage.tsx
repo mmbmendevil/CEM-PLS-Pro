@@ -22,6 +22,8 @@ import { ROUTE_PATHS } from '../../routes/paths'
 import { getUserAssessmentProgress } from '../../services/assessmentProgress'
 import { getDiagnosticQuestionPoolForStage, getDiagnosticQuestionsByIdsForStage, normalizeSelectedAnswersForStage } from '../data/diagnosticQuestions'
 
+const THRESHOLD = 75
+
 const toPercentage = (correct: number, total: number) => {
   if (total <= 0) {
     return 0
@@ -43,7 +45,7 @@ const getRecommendationFeedback = (percent: number) => {
     return 'Excellent mastery in this module! Keep momentum by reviewing the few missed questions and challenge yourself with advanced practice.'
   }
 
-  if (percent >= 75) {
+  if (percent >= THRESHOLD) {
     return 'You passed this module. Keep working on the missed questions to strengthen mastery.'
   }
 
@@ -152,14 +154,6 @@ const PostTestGapAnalysisPage = () => {
     }
   }, [uid, selectedStage])
 
-  const wrongAnswers = useMemo(() => {
-    if (!totalItems) {
-      return 0
-    }
-
-    return Math.max(totalItems - score, 0)
-  }, [score, totalItems])
-
   const activeQuestions = useMemo(() => {
     const stagePool = getDiagnosticQuestionPoolForStage(activeStage)
     return questionIds.length > 0 ? getDiagnosticQuestionsByIdsForStage(questionIds, activeStage) : stagePool
@@ -232,6 +226,20 @@ const PostTestGapAnalysisPage = () => {
 
     return stats
   }, [activeQuestions, selectedAnswers])
+
+  const gapAnalysis = useMemo(() => {
+    return Object.entries(competencyStats)
+      .map(([competencyCode, stats]) => {
+        const percent = toPercentage(stats.correct, stats.total)
+
+        return {
+          competencyCode,
+          percent,
+          deviation: Number((THRESHOLD - percent).toFixed(2)),
+        }
+      })
+      .filter((entry) => entry.percent < THRESHOLD)
+  }, [competencyStats])
 
   const computedPercentage = useMemo(() => {
     return toPercentage(score, totalItems)
@@ -385,7 +393,7 @@ const PostTestGapAnalysisPage = () => {
                     </p>
                     <div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-2">
                       <Badge label="Test Status" value="Failed" color="text-rose-600" />
-                      <Badge label="Knowledge Gaps" value={`${wrongAnswers} topics`} color={highlightText} />
+                      <Badge label="Weak Competencies" value={`${gapAnalysis.length} competencies`} color={highlightText} />
                     </div>
                   </div>
 
@@ -402,14 +410,6 @@ const PostTestGapAnalysisPage = () => {
                         {score} <span className={isBrightMode ? 'text-xl text-slate-500' : 'text-xl text-slate-500'}>/ {totalItems || 1}</span>
                       </h3>
                       <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Correct</p>
-                    </div>
-                    <div className={`hidden sm:block h-20 w-px ${isBrightMode ? 'bg-amber-100' : 'bg-slate-700'}`}></div>
-                    <div className="text-center sm:text-left">
-                      <div className="flex items-baseline justify-center sm:justify-start gap-2">
-                        <span className={`text-3xl font-black tracking-tighter ${highlightText}`}>--</span>
-                        <span className={isBrightMode ? 'text-base font-bold text-rose-600' : 'text-base font-bold text-rose-500'}>theta</span>
-                      </div>
-                      <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Ability (IRT)</p>
                     </div>
                   </div>
                 </div>

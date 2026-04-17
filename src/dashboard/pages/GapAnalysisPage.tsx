@@ -469,14 +469,6 @@ const GapAnalysisPage = () => {
                   </h3>
                   <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Correct</p>
                 </div>
-                <div className={`hidden sm:block h-20 w-px ${isBrightMode ? 'bg-amber-100' : 'bg-slate-700'}`}></div>
-                <div className="text-center sm:text-left">
-                  <div className="flex items-baseline justify-center sm:justify-start gap-2">
-                    <span className={`text-3xl font-black tracking-tighter ${highlightText}`}>{result.theta === null ? '--' : result.theta.toFixed(2)}</span>
-                    <span className={isBrightMode ? 'text-base font-bold text-blue-600' : 'text-base font-bold text-indigo-500'}>theta</span>
-                  </div>
-                  <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Ability (IRT)</p>
-                </div>
               </div>
                 </div>
 
