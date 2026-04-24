@@ -388,7 +388,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 41,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is pipelining in CPU architecture?',
     options: ['Executing one instruction at a time', 'Dividing instructions into stages executed in parallel', 'Storing instructions in memory', 'Reducing CPU clock speed'],
     correctAnswerIndex: 1,
@@ -397,7 +397,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 42,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is the main purpose of pipelining?',
     options: ['Increase memory size', 'Reduce instruction execution stages', 'Enhance overall CPU performance', 'Eliminate instruction decoding'],
     correctAnswerIndex: 2,
@@ -406,7 +406,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 43,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'In a pipeline processor, what happens to multiple instructions?',
     options: ['They are ignored', 'They are processed sequentially only', 'They are processed simultaneously in different stages', 'They are stored permanently'],
     correctAnswerIndex: 2,
@@ -415,7 +415,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 44,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is the role of pipeline registers?',
     options: ['Perform arithmetic operations', 'Store intermediate data between stages', 'Execute instructions', 'Control input devices'],
     correctAnswerIndex: 1,
@@ -424,7 +424,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 45,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What controls all stages and registers in a pipeline?',
     options: ['ALU', 'Cache', 'Control Unit', 'Memory Unit'],
     correctAnswerIndex: 2,
@@ -433,7 +433,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 46,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'Which stage involves fetching the instruction into the instruction register?',
     options: ['Decode', 'Execute', 'Fetch', 'Store'],
     correctAnswerIndex: 2,
@@ -442,7 +442,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 47,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What occurs during the decode stage?',
     options: ['Instruction is executed', 'Instruction is interpreted', 'Data is stored', 'Memory is cleared'],
     correctAnswerIndex: 1,
@@ -451,7 +451,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 48,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is the result after all pipeline stages are completed?',
     options: ['Input data', 'Intermediate data', 'Final output', 'Cache data'],
     correctAnswerIndex: 2,
@@ -460,7 +460,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 49,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What type of processing does pipelining represent?',
     options: ['Sequential processing', 'Parallel processing', 'Batch processing', 'Manual processing'],
     correctAnswerIndex: 1,
@@ -469,7 +469,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 50,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is latency in pipelining?',
     options: ['Number of instructions per second', 'Time to complete one instruction', 'Size of pipeline stages', 'Number of registers used'],
     correctAnswerIndex: 1,
@@ -478,7 +478,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 51,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is the main advantage of pipelining compared to non-pipelined execution?',
     options: ['Simpler design', 'Lower cost', 'Higher throughput', 'Fewer instructions'],
     correctAnswerIndex: 2,
@@ -487,7 +487,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 52,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What happens in a non-pipelined CPU during instruction execution?',
     options: ['Multiple instructions are executed simultaneously', 'CPU components remain idle during parts of the cycle', 'All stages run in parallel', 'No decoding occurs'],
     correctAnswerIndex: 1,
@@ -496,7 +496,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 53,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is the structure of an assembly instruction?',
     options: ['Input and output', 'Opcode and operand', 'Address and register', 'Cache and memory'],
     correctAnswerIndex: 1,
@@ -505,7 +505,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 54,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is immediate addressing?',
     options: ['Operand is a memory address', 'Operand is the actual value', 'Operand is stored in cache', 'Operand is ignored'],
     correctAnswerIndex: 1,
@@ -514,7 +514,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 55,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'Why does direct addressing reduce pipeline efficiency?',
     options: ['It removes instructions', 'It requires extra memory access', 'It increases clock speed', 'It simplifies execution'],
     correctAnswerIndex: 1,
@@ -523,7 +523,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 56,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What type of hazard occurs due to resource conflicts?',
     options: ['Data hazard', 'Control hazard', 'Structural hazard', 'Logical hazard'],
     correctAnswerIndex: 2,
@@ -532,7 +532,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 57,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What type of hazard occurs when instructions depend on previous results?',
     options: ['Structural hazard', 'Data hazard', 'Control hazard', 'Memory hazard'],
     correctAnswerIndex: 1,
@@ -541,7 +541,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 58,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'Which hazard is caused by branch instructions?',
     options: ['Data hazard', 'Structural hazard', 'Control hazard', 'Execution hazard'],
     correctAnswerIndex: 2,
@@ -550,7 +550,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 59,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What does throughput measure in pipelining?',
     options: ['Time per instruction', 'Number of instructions completed per unit time', 'Size of memory', 'Number of pipeline stages'],
     correctAnswerIndex: 1,
@@ -559,7 +559,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 60,
-    module: 'Pipeline Architecture',
+    module: 'Pipelining and Hazards',
     question: 'What is one disadvantage of pipelining?',
     options: ['Low efficiency', 'Simple design', 'Complex implementation', 'Reduced performance'],
     correctAnswerIndex: 2,
@@ -571,7 +571,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
 const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 61,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What is the primary purpose of cache memory in a computer system?',
     options: ['To store permanent data', 'To reduce the average time to access data from main memory', 'To replace CPU registers', 'To increase disk storage capacity'],
     correctAnswerIndex: 1,
@@ -580,7 +580,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 62,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Why is cache memory considered faster than main memory?',
     options: ['It is located closer to the CPU', 'It stores more instructions', 'It uses magnetic storage', 'It operates at lower speed'],
     correctAnswerIndex: 0,
@@ -589,7 +589,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 63,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What occurs during a cache miss?',
     options: ['Data is fetched from main memory', 'Cache is cleared', 'CPU halts processing', 'Data is deleted permanently'],
     correctAnswerIndex: 0,
@@ -598,7 +598,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 64,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Which metric is commonly used to evaluate cache performance?',
     options: ['Clock frequency', 'Bandwidth', 'Hit ratio', 'Latency rate'],
     correctAnswerIndex: 2,
@@ -607,7 +607,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 65,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'In direct mapping, what happens when two memory blocks map to the same cache line?',
     options: ['Both are stored simultaneously', 'One block overwrites the other', 'Cache expands automatically', 'CPU ignores both blocks'],
     correctAnswerIndex: 1,
@@ -616,7 +616,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 66,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Which component uniquely identifies a memory block in a cache line?',
     options: ['Offset', 'Index', 'Register', 'Tag'],
     correctAnswerIndex: 3,
@@ -625,7 +625,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 67,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What is the main advantage of fully associative mapping?',
     options: ['Simpler implementation', 'Faster indexing', 'Flexibility in block placement', 'Lower hardware cost'],
     correctAnswerIndex: 2,
@@ -634,7 +634,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 68,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'How does set-associative mapping improve cache performance?',
     options: ['Eliminates cache misses', 'Increases memory size', 'Removes need for tags', 'Reduces conflict misses'],
     correctAnswerIndex: 3,
@@ -643,7 +643,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 69,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Which principle states that recently accessed data is likely to be accessed again?',
     options: ['Spatial locality', 'Logical locality', 'Temporal locality', 'Sequential locality'],
     correctAnswerIndex: 2,
@@ -652,7 +652,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 70,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Why is cache memory more expensive than main memory?',
     options: ['It stores permanent data', 'It uses faster and more complex hardware', 'It has larger capacity', 'It requires less power'],
     correctAnswerIndex: 1,
@@ -661,7 +661,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 71,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Why did traditional object-oriented design reduce cache efficiency in games?',
     options: ['It used excessive CPU registers', 'It reduced processing speed intentionally', 'It scattered data across memory locations', 'It avoided loops in execution'],
     correctAnswerIndex: 2,
@@ -670,7 +670,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 72,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What is a key benefit of data-oriented design for caching?',
     options: ['It groups related data contiguously', 'It eliminates memory usage', 'It reduces CPU frequency', 'It increases disk storage'],
     correctAnswerIndex: 0,
@@ -679,7 +679,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 73,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What defines a cache hit?',
     options: ['Data is retrieved from main memory', 'Data is found in the cache', 'Cache memory is cleared', 'CPU skips execution'],
     correctAnswerIndex: 1,
@@ -688,7 +688,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 74,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'How does spatial locality improve performance?',
     options: ['By accessing distant memory locations', 'By increasing CPU speed', 'By accessing nearby memory addresses', 'By reducing cache size'],
     correctAnswerIndex: 2,
@@ -697,7 +697,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 75,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What is the commonly used size of a cache line?',
     options: ['32 bytes', '16 bytes', '128 bytes', '64 bytes'],
     correctAnswerIndex: 3,
@@ -706,7 +706,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 76,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'In an n-way set associative cache, what does "n" represent?',
     options: ['Number of CPUs', 'Number of sets', 'Number of lines per set', 'Number of memory blocks'],
     correctAnswerIndex: 2,
@@ -715,7 +715,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 77,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Which cache level is typically the fastest and smallest?',
     options: ['L2', 'L3', 'Main memory', 'L1'],
     correctAnswerIndex: 3,
@@ -724,7 +724,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 78,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Why do CPUs prefetch adjacent data?',
     options: ['To reduce power usage', 'To exploit spatial locality', 'To increase storage', 'To avoid cache usage'],
     correctAnswerIndex: 1,
@@ -733,7 +733,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 79,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'What trade-off is associated with fully associative cache?',
     options: ['Low flexibility but high speed', 'High flexibility but increased complexity', 'Low cost but high miss rate', 'Large size but slow access'],
     correctAnswerIndex: 1,
@@ -742,7 +742,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 80,
-    module: 'Cache Memory',
+    module: 'Cache Organization',
     question: 'Why are n-way set associative caches commonly used in real systems?',
     options: ['They eliminate all cache misses', 'They require no hardware', 'They maximize storage capacity', 'They balance speed and flexibility'],
     correctAnswerIndex: 3,
@@ -751,7 +751,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 81,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is the main purpose of virtual memory in an operating system?',
     options: ['To increase CPU speed', 'To provide a large continuous memory illusion', 'To store permanent files', 'To replace secondary storage'],
     correctAnswerIndex: 1,
@@ -760,7 +760,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 82,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'Why is direct access to physical memory considered unsafe?',
     options: ['It reduces system performance', 'It increases memory size', 'It allows processes to overwrite each other\'s memory', 'It prevents multitasking'],
     correctAnswerIndex: 2,
@@ -769,7 +769,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 83,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What type of fragmentation occurs when free memory is split into non-contiguous blocks?',
     options: ['Internal fragmentation', 'Logical fragmentation', 'Cache fragmentation', 'External fragmentation'],
     correctAnswerIndex: 3,
@@ -778,7 +778,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 84,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'Why might a program requesting 350 MB fail even if 474 MB total free memory exists?',
     options: ['Memory is too slow', 'Memory is not contiguous', 'CPU is overloaded', 'Disk space is insufficient'],
     correctAnswerIndex: 1,
@@ -787,7 +787,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 85,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is a key limitation of 32-bit systems regarding memory?',
     options: ['Limited to 2 GB RAM', 'Cannot run multiple programs', 'Limited to 4 GB addressable memory', 'Cannot use virtual memory'],
     correctAnswerIndex: 2,
@@ -796,7 +796,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 86,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'How does virtual memory improve system security?',
     options: ['By increasing RAM size', 'By isolating processes in separate address spaces', 'By removing disk usage', 'By speeding up CPU operations'],
     correctAnswerIndex: 1,
@@ -805,7 +805,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 87,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is the role of the Memory Management Unit (MMU)?',
     options: ['To store program instructions', 'To manage disk storage', 'To translate virtual addresses to physical addresses', 'To execute programs'],
     correctAnswerIndex: 2,
@@ -814,7 +814,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 88,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What happens during swapping in virtual memory?',
     options: ['Data is deleted permanently', 'Data is moved between RAM and disk', 'CPU registers are cleared', 'Cache memory is reset'],
     correctAnswerIndex: 1,
@@ -823,7 +823,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 89,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'Which concept allows programs larger than physical memory to run?',
     options: ['Segmentation', 'Paging', 'Virtual memory', 'Cache mapping'],
     correctAnswerIndex: 2,
@@ -832,7 +832,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 90,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is a major disadvantage of virtual memory?',
     options: ['Increased cost of RAM', 'Slower performance due to disk access', 'Reduced memory capacity', 'Elimination of multitasking'],
     correctAnswerIndex: 1,
@@ -841,7 +841,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 91,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What problem arises when multiple copies of the same library are loaded into memory?',
     options: ['Increased CPU usage', 'Memory wastage', 'Faster execution', 'Reduced fragmentation'],
     correctAnswerIndex: 1,
@@ -850,7 +850,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 92,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is the primary benefit of paging in memory management?',
     options: ['Eliminates internal fragmentation', 'Eliminates external fragmentation', 'Removes need for RAM', 'Simplifies CPU design'],
     correctAnswerIndex: 1,
@@ -859,7 +859,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 93,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is a page in virtual memory?',
     options: ['A variable-sized memory block', 'A fixed-size block of virtual memory', 'A CPU register', 'A disk partition'],
     correctAnswerIndex: 1,
@@ -868,7 +868,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 94,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is a frame in memory management?',
     options: ['A block of virtual memory', 'A disk storage unit', 'A fixed-size block of physical memory', 'A CPU instruction set'],
     correctAnswerIndex: 2,
@@ -877,7 +877,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 95,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What trade-off does paging introduce?',
     options: ['External fragmentation', 'Increased CPU usage', 'Internal fragmentation', 'Reduced memory access'],
     correctAnswerIndex: 2,
@@ -886,7 +886,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 96,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What is demand paging?',
     options: ['Loading entire programs into memory', 'Loading pages only when needed', 'Deleting unused memory', 'Allocating fixed memory blocks'],
     correctAnswerIndex: 1,
@@ -895,7 +895,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 97,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'How do shared pages improve memory efficiency?',
     options: ['By duplicating code across processes', 'By storing data permanently', 'By allowing multiple processes to use the same memory block', 'By reducing CPU speed'],
     correctAnswerIndex: 2,
@@ -904,7 +904,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 98,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'What are the two main components of a memory address in paging?',
     options: ['Segment and offset', 'Tag and index', 'Page number and offset', 'Frame and block'],
     correctAnswerIndex: 2,
@@ -913,7 +913,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 99,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'Why does virtual memory allow better multitasking?',
     options: ['It increases CPU clock speed', 'It allows more programs to run simultaneously', 'It removes disk usage', 'It simplifies hardware design'],
     correctAnswerIndex: 1,
@@ -922,7 +922,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   },
   {
     id: 100,
-    module: 'Virtual Memory',
+    module: 'Virtual Memory and ECC',
     question: 'Which best explains how virtual memory handles insufficient RAM?',
     options: ['It compresses data in RAM', 'It deletes inactive programs', 'It uses disk space as an extension of memory', 'It increases cache size'],
     correctAnswerIndex: 2,
