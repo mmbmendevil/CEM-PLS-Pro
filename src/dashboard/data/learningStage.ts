@@ -3,6 +3,12 @@ import type { ModuleProgressRecord } from '../../services/moduleProgress'
 
 export type LearningStageKey = 'prelim' | 'midterm' | 'final'
 
+export const LEARNING_STAGE_MODULE_IDS: Record<LearningStageKey, number[]> = {
+  prelim: [1, 2, 3],
+  midterm: [4, 5, 6],
+  final: [7, 8, 9],
+}
+
 export type LearningStageConfig = {
   key: LearningStageKey
   label: 'Prelim' | 'Midterm' | 'Final'

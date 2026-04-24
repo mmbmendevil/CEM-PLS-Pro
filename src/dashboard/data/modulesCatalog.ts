@@ -18,7 +18,7 @@ export type ModuleCatalogItem = {
 
 export const MODULES_CATALOG: ModuleCatalogItem[] = [
   {
-    id: 2,
+    id: 1,
     slug: 'cpu-components',
     order: 1,
     title: 'CPU Components',
@@ -116,7 +116,7 @@ CPUs are everywhere, not just in computers:
     },
   },
   {
-    id: 7,
+    id: 2,
     slug: 'architecture-fundamentals',
     order: 2,
     title: 'Architecture Fundamentals',
@@ -196,7 +196,7 @@ Key Differences Between Von Neumann and Harvard Architecture
     },
   },
   {
-    id: 1,
+    id: 3,
     slug: 'memory-hierarchy',
     order: 3,
     title: 'Memory Hierarchy',
@@ -562,7 +562,7 @@ Virtual Memory vs Physical Memory
     },
   },
   {
-    id: 8,
+    id: 6,
     slug: 'instruction-set-architecture',
     order: 6,
     title: 'Instruction Set Architecture',
@@ -659,7 +659,7 @@ There are multiple types of ISA, each designed with different goals in mind, suc
     },
   },
   {
-    id: 3,
+    id: 7,
     slug: 'pipelining-and-hazards',
     order: 7,
     title: 'Pipelining and Hazards',
@@ -784,7 +784,7 @@ Disadvantages of Pipelining
     },
   },
   {
-    id: 6,
+    id: 8,
     slug: 'advanced-execution',
     order: 8,
     title: 'Advanced Execution',
