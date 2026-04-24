@@ -158,8 +158,9 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 14,
     module: 'Memory Hierarchy',
-    question: 'You are designing an L1 cache where access latency must be extremely low and capacity can be small, even if cost per bit is high. Which memory technology best fits this requirement?',
-    options: ['DRAM', 'Disk', 'Magnetic Tape', 'SRAM'],
+    question:
+      'You are designing an on-chip L1 cache that must deliver single-digit nanosecond access latency at high CPU frequency. Capacity can be small (e.g., tens of KB) and higher cost per bit is acceptable. Which memory technology is the BEST fit?',
+    options: ['eDRAM', 'Off-chip DRAM (e.g., LPDDR)', 'Embedded MRAM', 'SRAM'],
     correctAnswerIndex: 3,
     bloomLevel: 'Evaluate',
     competencyCode: 'MH',
@@ -293,12 +294,13 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 29,
     module: 'CPU Components',
-    question: 'A laptop must run video calls, a browser, and background updates at the same time under a power limit. Which CPU type is the BEST choice to handle multiple tasks efficiently?',
+    question:
+      'A laptop must run a video call, a browser, and background updates at the same time while staying within a tight power limit (e.g., ~15W). Which CPU option is the BEST fit to keep the system responsive under parallel workloads?',
     options: [
-      'Single-core CPU with a higher clock speed',
-      'Multi-core CPU that can run tasks on separate cores',
-      'Analog CPU optimized for continuous signals',
-      'External CPU that is not on the system motherboard',
+      'A high-clock single-core CPU with aggressive turbo boosting',
+      'A multi-core CPU that can schedule tasks across separate cores with power management',
+      'A dual-core CPU with simultaneous multithreading (SMT) but fewer physical cores',
+      'A very-low-frequency many-core CPU tuned for batch throughput over interactive responsiveness',
     ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
@@ -542,12 +544,13 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 55,
     module: 'Pipelining and Hazards',
-    question: 'You are optimizing code for a pipelined CPU where a data-memory access can cost tens of cycles on a miss. To maximize pipeline throughput, which choice is the BEST for most frequently executed operations?',
+    question:
+      'You are optimizing hot code on a pipelined CPU where a data-memory access can cost tens of cycles on a cache miss. To maximize pipeline throughput, which operand/addressing choice is the BEST for the most frequently executed operations?',
     options: [
-      'Prefer register/immediate operands to avoid extra memory reads from direct addressing',
-      'Prefer direct addressing so each instruction fetches operands from memory',
-      'Prefer direct addressing because it always reduces CPI',
-      'Use direct addressing to simplify the control unit even if it adds stalls',
+      'Prefer register and immediate operands; load once and reuse values from registers in the hot loop',
+      'Use direct memory operands for most ALU operations so each instruction reads operands from memory when needed',
+      'Use complex addressing modes to reduce instruction count even if they increase memory traffic for hot paths',
+      'Rely on frequent memory operands to minimize register usage, accepting more load/use stalls in the pipeline',
     ],
     correctAnswerIndex: 0,
     bloomLevel: 'Evaluate',
@@ -618,12 +621,13 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 62,
     module: 'Cache Organization',
-    question: 'You are tuning an embedded system with strict power limits where DRAM latency is a bottleneck. You need the BEST way to reduce average data access latency without increasing DRAM power. Which change should you choose?',
+    question:
+      'You are tuning an embedded system with strict power limits where DRAM latency is a bottleneck. The software is fixed (you cannot restructure data or manually manage a scratchpad). You need the BEST way to reduce average data access latency without increasing DRAM power. Which change should you choose?',
     options: [
       'Add a small on-chip cache close to the CPU to exploit locality and reduce average access time',
-      'Increase DRAM capacity to reduce access latency',
-      'Use magnetic storage for frequently accessed working data',
-      'Lower DRAM frequency to reduce latency and improve throughput',
+      'Add a small software-managed scratchpad SRAM and require the application to explicitly copy hot data in/out',
+      'Add an aggressive hardware prefetcher that increases DRAM traffic to hide latency',
+      'Select a lower-latency DRAM timing profile/grade within the same power envelope (e.g., lower CAS latency)',
     ],
     correctAnswerIndex: 0,
     bloomLevel: 'Evaluate',
@@ -677,8 +681,14 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 68,
     module: 'Cache Organization',
-    question: 'You are choosing a cache mapping scheme for an L1 cache. You need better hit rate than direct-mapped, but you cannot afford the full hardware cost of fully associative. Which mapping is the BEST compromise?',
-    options: ['Direct mapping', 'Fully associative mapping', 'Set-associative mapping', 'No cache (always use main memory)'],
+    question:
+      'You are choosing a cache mapping scheme for an L1 cache. You need better hit rate than direct-mapped, but you cannot afford the full comparator/tag-search hardware of fully associative. Which mapping is the BEST compromise?',
+    options: [
+      'Direct mapping (1-way)',
+      'Fully associative mapping',
+      'Set-associative mapping (limited associativity, e.g., 2- or 4-way)',
+      'Pseudo-associative mapping (probe an alternate location on a miss)',
+    ],
     correctAnswerIndex: 2,
     bloomLevel: 'Evaluate',
     competencyCode: 'CM',
@@ -705,7 +715,12 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
     id: 71,
     module: 'Cache Organization',
     question: 'A game engine must hit 60 FPS on a CPU with small caches. You can either keep entity data in scattered object graphs or restructure data for more contiguous access. Which reasoning BEST supports moving away from traditional object-oriented design for cache efficiency?',
-    options: ['It used excessive CPU registers', 'It reduced processing speed intentionally', 'It scattered data across memory locations', 'It avoided loops in execution'],
+    options: [
+      'It reduces branch mispredictions by eliminating virtual function calls in gameplay code',
+      'It improves instruction-cache locality because fewer unique methods are executed per frame',
+      'It improves spatial locality by storing hot component fields contiguously, reducing cache misses from pointer chasing',
+      'It reduces memory usage primarily by eliminating dynamic allocation entirely at runtime',
+    ],
     correctAnswerIndex: 2,
     bloomLevel: 'Evaluate',
     competencyCode: 'CM',
@@ -733,10 +748,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
     module: 'Cache Organization',
     question: 'A CPU has 64-byte cache lines and your code is memory-bound. Which access pattern is the BEST choice to exploit spatial locality and reduce cache misses?',
     options: [
-      'Access memory locations that are far apart to avoid cache evictions',
-      'Use random indexing so the cache cannot predict future accesses',
-      'Access consecutive memory addresses so each cache line fetch is reused',
-      'Use a large stride so each access lands in a different cache line',
+      'Use a large fixed stride (e.g., every 64th element) so each access lands in a different cache line',
+      'Use an index array to access elements in a pseudo-random order (e.g., hash table style)',
+      'Access consecutive memory addresses (unit-stride) so each fetched cache line supplies many useful elements',
+      'Interleave accesses across multiple far-apart arrays so each iteration touches many distinct cache lines',
     ],
     correctAnswerIndex: 2,
     bloomLevel: 'Evaluate',
@@ -862,8 +877,14 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 88,
     module: 'Virtual Memory and ECC',
-    question: 'An OS must keep applications running during memory pressure instead of terminating them, even if performance drops due to disk activity. Which mechanism BEST describes what happens during swapping?',
-    options: ['Data is deleted permanently', 'Data is moved between RAM and disk', 'CPU registers are cleared', 'Cache memory is reset'],
+    question:
+      'An OS must keep applications running during memory pressure instead of terminating them, even if performance drops due to disk I/O. Which mechanism is the BEST match for swapping?',
+    options: [
+      'Compress cold pages in RAM to avoid disk I/O at the cost of extra CPU time',
+      'Move inactive pages/process memory between RAM and disk (swap space) to free physical memory',
+      'Increase cache size so applications stop allocating as much heap memory',
+      'Disable virtual memory so applications must fit entirely in physical RAM',
+    ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
     competencyCode: 'VM',
@@ -903,7 +924,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
       'Compaction to make free memory contiguous',
       'Paging using fixed-size pages and frames',
       'Require all allocations to be contiguous and deny requests otherwise',
-      'Disable memory protection to reduce overhead',
+      'Segmentation with variable-sized segments, accepting external fragmentation unless compaction is performed',
     ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
@@ -930,8 +951,14 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 95,
     module: 'Virtual Memory and ECC',
-    question: 'An OS adopts paging to eliminate external fragmentation and avoid expensive compaction, but memory is tight. Which trade-off is the BEST description of what paging can introduce?',
-    options: ['External fragmentation', 'Increased CPU usage', 'Internal fragmentation', 'Reduced memory access'],
+    question:
+      'An OS adopts paging to eliminate external fragmentation and avoid expensive compaction, but memory is tight and many allocations are smaller than a page. Which trade-off is the BEST description of what paging can introduce?',
+    options: [
+      'External fragmentation',
+      'More disk I/O due to swapping',
+      'Internal fragmentation (wasted space within the last page)',
+      'Additional overhead for page tables and TLB misses',
+    ],
     correctAnswerIndex: 2,
     bloomLevel: 'Evaluate',
     competencyCode: 'VM',
@@ -1102,7 +1129,12 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
     id: 114,
     module: 'Advanced Execution',
     question: 'A CPU team can increase pipeline depth to raise clock frequency, but branch mispredictions and hazards will cost more cycles per event. Which option is the BEST description of this trade-off?',
-    options: ['Eliminates all hazards', 'Always reduces CPI', 'Reduces clock time but increases stall overhead', 'Removes need for registers'],
+    options: [
+      'Improves clock frequency, but requires more bypass paths and control logic that can increase design complexity and power',
+      'Improves clock frequency, but reduces the branch-misprediction penalty because each stage does less work',
+      'Reduces clock period, but increases the cycles lost per misprediction/stall because the pipeline has more stages to flush or wait',
+      'Improves clock frequency without materially affecting CPI or the cost of hazards and mispredictions',
+    ],
     correctAnswerIndex: 2,
     bloomLevel: 'Evaluate',
     competencyCode: 'ILP',
@@ -1110,12 +1142,13 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 115,
     module: 'Advanced Execution',
-    question: 'A CPU core frequently waits on cache misses, and you cannot increase clock speed due to thermal limits. To improve throughput, which capability is the BEST choice to keep useful work running while some instructions are stalled?',
+    question:
+      'A CPU core frequently waits on cache misses in a mostly single-threaded workload, and you cannot increase clock speed due to thermal limits. To improve throughput, which capability is the BEST choice to keep useful work running while some instructions are stalled?',
     options: [
-      'Force strict in-order execution so the pipeline is simpler and always waits for the oldest instruction',
-      'Allow independent instructions to execute before stalled ones when their operands are ready',
-      'Execute only sequentially and pause the entire core whenever any instruction stalls',
-      'Eliminate dependencies entirely so instructions never need to wait for results',
+      'Use strict in-order issue/execute to keep the design simple, accepting that one long-latency miss blocks following work',
+      'Allow independent instructions to execute before stalled ones when their operands are ready (out-of-order execution)',
+      'Add simultaneous multithreading (SMT) so another thread can run while one thread waits on memory',
+      'Increase pipeline depth to raise frequency so stalls become a smaller fraction of total time',
     ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
@@ -1172,8 +1205,14 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 121,
     module: 'Architecture Fundamentals',
-    question: 'You are designing a microcontroller that must fetch an instruction and access data in the same cycle for performance, and extra hardware complexity is acceptable. Which architecture is the BEST choice?',
-    options: ['Separate memory for data and instructions', 'Shared memory for data and instructions', 'Multiple CPUs in one system', 'Parallel processing of instructions only'],
+    question:
+      'You are designing a microcontroller that must fetch an instruction and access data in the same cycle to hit a throughput target. You can afford extra hardware complexity. Which architecture is the BEST choice?',
+    options: [
+      'Harvard-style: separate instruction and data memories/buses enabling parallel fetch and data access',
+      'Von Neumann-style: a unified memory/bus shared by instructions and data',
+      'Von Neumann-style with a deeper pipeline to hide the shared-bus bottleneck',
+      'Von Neumann-style with a larger unified cache but still a single shared path to memory',
+    ],
     correctAnswerIndex: 0,
     bloomLevel: 'Evaluate',
     competencyCode: 'AF',
@@ -1217,8 +1256,14 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 126,
     module: 'Architecture Fundamentals',
-    question: 'You are designing a microcontroller that must fetch an instruction and access data in the same cycle to maximize throughput, even if it increases hardware complexity. Which architecture best fits?',
-    options: ['Single memory system', 'Separate memory for data and instructions', 'Shared bus system', 'Sequential processing only'],
+    question:
+      'You are designing a microcontroller that must fetch an instruction and access data in the same cycle to maximize throughput, and increased hardware complexity is acceptable. Which architecture BEST fits?',
+    options: [
+      'Von Neumann architecture with a single shared memory and bus',
+      'Harvard architecture with separate instruction and data memories/buses',
+      'Von Neumann architecture with a wider shared bus but still one shared access path',
+      'Von Neumann architecture with a faster clock to compensate for the shared-bus limitation',
+    ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
     competencyCode: 'AF',
@@ -1235,8 +1280,14 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 128,
     module: 'Architecture Fundamentals',
-    question: 'You are designing a DSP that must fetch an instruction and read sample data every cycle under a strict real-time latency target. Which design choice is the BEST reason Harvard-style designs can be faster than Von Neumann?',
-    options: ['Uses fewer components', 'Uses shared memory', 'Uses separate buses for data and instructions', 'Uses slower memory'],
+    question:
+      'You are designing a DSP that must fetch an instruction and read sample data every cycle under a strict real-time latency target. Which design choice is the BEST reason Harvard-style designs can be faster than Von Neumann?',
+    options: [
+      'A deeper pipeline that increases clock frequency but keeps a single shared memory/bus',
+      'A larger unified cache so instructions and data share the same cache path',
+      'Separate instruction and data buses (or memories) enabling parallel instruction fetch and data access',
+      'A single shared bus with more aggressive branch prediction to keep the pipeline full',
+    ],
     correctAnswerIndex: 2,
     bloomLevel: 'Evaluate',
     competencyCode: 'AF',
@@ -1523,12 +1574,13 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 160,
     module: 'Instruction Set Architecture',
-    question: 'You are choosing an ISA for a high-frequency pipelined CPU where simple decoding and consistent instruction timing matter. Which option is the BEST choice and justification?',
+    question:
+      'You are choosing an ISA for a high-frequency pipelined CPU where the front-end decode budget is tight and consistent instruction timing matters. Which option is the BEST choice and justification?',
     options: [
       'Choose RISC: simpler, typically fixed-length instructions that are easier to pipeline',
-      'Choose CISC: more complex instructions to reduce the number of instructions executed',
-      'Choose RISC: variable-length, complex instructions to maximize code density',
-      'Both are identical in design goals and pipeline friendliness',
+      'Choose CISC: complex, variable-length instructions reduce instruction count so decode work per cycle is lower',
+      'Choose CISC: higher code density reduces instruction fetch bandwidth, so decode simplicity is less important',
+      'Choose either: ISA instruction formats do not materially affect decode complexity in a high-frequency pipeline',
     ],
     correctAnswerIndex: 0,
     bloomLevel: 'Evaluate',
@@ -1582,8 +1634,14 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 166,
     module: 'Performance Analysis',
-    question: 'A team wants to keep buying more processors to speed up a workload, but the sequential portion of the program cannot be reduced. As the number of processors N approaches infinity, what happens to the overall speedup?',
-    options: ['Becomes zero', 'Becomes limited by sequential portion', 'Becomes negative', 'Remains constant'],
+    question:
+      "A team wants to keep buying more processors to speed up a workload, but the sequential portion of the program cannot be reduced. As the number of processors N approaches infinity, what happens to the overall speedup (per Amdahl's Law)?",
+    options: [
+      'It continues to increase almost linearly with N',
+      'It approaches a fixed maximum determined by the sequential fraction',
+      'It eventually decreases because adding processors always makes the program slower',
+      'It stays exactly the same as the 1-processor performance',
+    ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
     competencyCode: 'PA',
@@ -1647,10 +1705,10 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
     module: 'Performance Analysis',
     question: 'You must choose between two optimizations: one reduces instruction count but increases CPI, and the other reduces CPI but increases instruction count. On the same CPU, which factors are the BEST basis for deciding which version runs faster?',
     options: [
-      'Screen resolution',
+      'Only CPI, because instruction count does not affect runtime',
       'Number of instructions, CPI, and clock frequency',
-      'Keyboard input rate',
-      'Disk storage capacity',
+      'Only instruction count, because CPI changes rarely matter on a fixed CPU',
+      'Cache size, because a larger cache automatically makes either version faster',
     ],
     correctAnswerIndex: 1,
     bloomLevel: 'Evaluate',
@@ -1689,9 +1747,9 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
     question: 'A program has an instruction mix dominated by load/store operations, leading to a high average CPI at a fixed clock frequency. You can implement only one optimization this sprint. Which change best reduces the average CPI without increasing clock frequency?',
     options: [
       'Improve data locality (e.g., blocking/SoA) to increase cache hits and lower effective load/store CPI',
-      'Add detailed logging to better understand performance',
-      'Increase use of indirect branches to simplify control flow',
-      'Move computations from registers to memory to reduce register pressure',
+      'Aggressively unroll loops to increase ILP, even though the cache-miss rate stays the same',
+      'Add software prefetches for the hot loops, increasing memory traffic to overlap latency',
+      'Increase use of smaller registers/temporaries, even if it increases load/store traffic',
     ],
     correctAnswerIndex: 0,
     bloomLevel: 'Evaluate',
