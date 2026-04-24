@@ -6,6 +6,23 @@ This document is generated strictly from the current codebase. Any information n
 
 ---
 
+## 0. Recent Revisions (2026-04-24)
+- Assessment point caps:
+  - Pre-test capped at 15 points â€” `src/dashboard/data/diagnosticQuestions.ts`
+  - Post-test capped at 30 points â€” `src/dashboard/data/diagnosticQuestions.ts`
+- Bloom-based weights (used for scoring and caps):
+  - Remember/Understand = 1, Apply/Analyze = 1.5, Evaluate/Create = 2 â€” `src/dashboard/data/diagnosticQuestions.ts`
+- Adaptive selection:
+  - Pre-test uses CAT-style adaptive next-question selection â€” `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
+  - Post-test uses CAT-style adaptive next-question selection â€” `src/dashboard/pages/SummativePosttestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
+- Assessment UI updates:
+  - Question header simplified to “Question N” (no “of N”) â€” `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/pages/SummativePosttestPage.tsx`
+  - Right-side question list shows per-question points + running total vs cap â€” `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/pages/SummativePosttestPage.tsx`
+- Reviewer/flashcards:
+  - Reviewer prompt/fallback updated to wrong/correct emphasis (unseen folded into “needs review”) â€” `src/dashboard/data/reviewerPromptBuilder.ts`
+  - Flashcards show only wrong/correct counts, but can include unseen questions as extra practice cards â€” `src/dashboard/pages/FlashcardReviewPage.tsx`
+  - Cheatsheet UI removed “unseen” section and legend references â€” `src/dashboard/pages/CheatsheetReviewPage.tsx`
+
 ## 1. System Overview
 
 ### System Name
@@ -27,7 +44,7 @@ This document is generated strictly from the current codebase. Any information n
 - NOT SPECIFIED IN SYSTEM (Chapter 1 problem statement is not present in the repository).
 - Implemented objectives implied by the UI and logic:
   - Identify weak competencies from diagnostic answers and present gap analysis — `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/pages/GapAnalysisPage.tsx`
-  - Generate a prioritized reviewer (AI-assisted) based on wrong/unseen/correct questions — `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts`
+  - Generate a prioritized reviewer (AI-assisted) based on wrong/correct questions (unseen questions are used only as extra practice cards in flashcards) — `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts`, `src/dashboard/pages/FlashcardReviewPage.tsx`
   - Track progress across modules and assessments — `src/services/moduleProgress.ts`, `src/services/assessmentProgress.ts`
 
 ### Target Users
@@ -46,7 +63,7 @@ This document is generated strictly from the current codebase. Any information n
 - User profile create/upsert/read (Firestore `userProfiles`) — `src/services/userProfiles.ts`
 - Course modules viewing and completion progress tracking — `src/dashboard/pages/ModulesPage.tsx`, `src/dashboard/pages/ModuleViewerPage.tsx`, `src/services/moduleProgress.ts`
 - Diagnostic pre-test:
-  - Random selection by module buckets (shuffle + slice) — `src/dashboard/data/diagnosticQuestions.ts`
+  - CAT-style adaptive question selection with Bloom-based point weights and a fixed points cap (15 pts) — `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
   - Score + competency breakdown computation and persistence — `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/services/assessmentProgress.ts`
 - Gap analysis:
   - Pre-test analysis — `src/dashboard/pages/GapAnalysisPage.tsx`
@@ -57,7 +74,7 @@ This document is generated strictly from the current codebase. Any information n
   - Audiobook mode (browser SpeechSynthesis over reviewer script) — `src/dashboard/pages/AudiobookReviewPage.tsx`
   - Cheatsheet mode with export to PNG/PDF via html2canvas + jsPDF — `src/dashboard/pages/CheatsheetReviewPage.tsx`
 - Summative post-test:
-  - Weighted question selection prioritizing unseen, then wrong — `src/dashboard/data/diagnosticQuestions.ts`
+  - CAT-style adaptive question selection with a fixed points cap (30 pts) — `src/dashboard/pages/SummativePosttestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
   - Attempt tracking, lock after max failed attempts — `src/dashboard/pages/SummativePosttestPage.tsx`
 - Learning results display and reviewer reset — `src/dashboard/pages/LearningResultsPage.tsx`, `src/services/assessmentProgress.ts`
 - Certification page with print/download — `src/dashboard/pages/CertificationPage.tsx`
@@ -78,13 +95,13 @@ This document is generated strictly from the current codebase. Any information n
 |---|---|---|---|---|---|
 | NOT SPECIFIED IN SYSTEM | Track module learning progress | Module Viewer + Module Progress Service | Progress = `videoProgress*0.8 + scrollProgress*0.2`, persisted with debounce | `ModuleProgress` documents under `userProfiles/{uid}` | `src/dashboard/pages/ModuleViewerPage.tsx`, `src/services/moduleProgress.ts` |
 | NOT SPECIFIED IN SYSTEM | Gate diagnostic access on module completion | Sidebar + learningStage module completion logic | `areStageModulesCompleted()` checks each module in stage range | `ModuleProgressRecord` set; stage module range config | `src/dashboard/Sidebar.tsx`, `src/dashboard/data/learningStage.ts` |
-| NOT SPECIFIED IN SYSTEM | Diagnostic pre-test question selection | Diagnostic Question Dataset | Group-by module then `shuffle(...).slice(itemsPerModule)` | Diagnostic question pools by stage | `src/dashboard/data/diagnosticQuestions.ts:getRandomDiagnosticPretestQuestions` |
-| NOT SPECIFIED IN SYSTEM | Diagnostic scoring | Diagnostic Pre-test Page | `score = count(selected==correct)`; `percentage = (score/total)*100` | `selectedAnswers`, `questions[]` | `src/dashboard/pages/DiagnosticPretestPage.tsx` |
+| NOT SPECIFIED IN SYSTEM | Diagnostic pre-test question selection | Diagnostic Question Dataset | CAT-style adaptive selection (heuristic difficulty targeting + module balancing) capped at 15 points | Diagnostic question pools by stage; saved diagnostic answers | `src/dashboard/data/diagnosticQuestions.ts:getCATPretestInitialQuestions`, `src/dashboard/data/diagnosticQuestions.ts:getCATPretestNextQuestion` |
+| NOT SPECIFIED IN SYSTEM | Diagnostic scoring | Diagnostic Pre-test Page | `score = sum(weight for correct answers)`; `percentage = (score/totalPossible)*100` | `selectedAnswers`, `questions[]` with `weight` | `src/dashboard/pages/DiagnosticPretestPage.tsx` |
 | NOT SPECIFIED IN SYSTEM | Competency breakdown per diagnostic | Diagnostic Pre-test Page | Bucket by `competencyCode` and compute per-bucket percentage | `questions[].competencyCode`, `selectedAnswers` | `src/dashboard/pages/DiagnosticPretestPage.tsx` |
 | NOT SPECIFIED IN SYSTEM | Pre-test gap analysis metrics (theta computed; not displayed in UI) | Gap Analysis Page + generateResult | Gap aggregation from mapped (question→competency) responses, theta = `log(correct/(total-correct))` if interior | `correct`, `total`, computed `responses`, computed `mapping` | `src/services/assessmentProgress.ts:generateResult`, `src/dashboard/pages/GapAnalysisPage.tsx` |
-| NOT SPECIFIED IN SYSTEM | Personalized reviewer generation (AI) | Personalized Study Plan Page + OpenAI proxy | Build prompt (wrong/unseen/correct), send chat request, fallback if empty/error | Diagnostic record, selected answers, competency breakdown | `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts`, `src/services/openai.ts`, `vite.config.ts` |
+| NOT SPECIFIED IN SYSTEM | Personalized reviewer generation (AI) | Personalized Study Plan Page + OpenAI proxy | Build prompt (wrong/correct sections; unseen folded into “needs review”), send chat request, fallback if empty/error | Diagnostic record, selected answers, competency breakdown | `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts`, `src/services/openai.ts`, `vite.config.ts` |
 | NOT SPECIFIED IN SYSTEM | Save/stream long reviewer scripts | Assessment Progress Service | Inline storage if length ≤ 90000 chars else chunk into docs sized 18000 chars | Firestore `ReviewerNarrationChunks` subcollection | `src/services/assessmentProgress.ts:saveReviewerNarrationScript` |
-| NOT SPECIFIED IN SYSTEM | Summative post-test adaptive question set | Diagnostic Question Dataset | Weighted sort per module: unseen first, then wrong, then random | Diagnostic question pool; diagnostic answers | `src/dashboard/data/diagnosticQuestions.ts:getWeightedSummativeQuestions` |
+| NOT SPECIFIED IN SYSTEM | Summative post-test adaptive question set | Diagnostic Question Dataset | CAT-style adaptive selection (heuristic difficulty targeting + pretest gap focus + module balancing) capped at 30 points | Diagnostic question pool; diagnostic answers | `src/dashboard/data/diagnosticQuestions.ts:getCATPosttestInitialQuestions`, `src/dashboard/data/diagnosticQuestions.ts:getCATPosttestNextQuestion` |
 | NOT SPECIFIED IN SYSTEM | Limit retakes (trial-based) | Summative Post-test Page | `failedAttempts` increments when `!passed`; lock when `>=3` | Firestore `AssessmentProgress.failedAttempts`, `isLocked` | `src/dashboard/pages/SummativePosttestPage.tsx` |
 | NOT SPECIFIED IN SYSTEM | Admin analytics dashboard | Admin Service + Admin Dashboard | Compute averages over submitted records; collectionGroup scan | Firestore `userProfiles`, `AssessmentProgress` | `src/services/admin.ts:getAdminMetrics`, `src/admin/pages/AdminDashboardPage.tsx` |
 
@@ -134,8 +151,8 @@ This document is generated strictly from the current codebase. Any information n
 
 #### C) Diagnostic pre-test and persistence
 1. Student starts pre-test at `/dashboard/prelim` — `src/routes/paths.ts`, `src/routes/AppRoutes.tsx`
-2. Questions are selected using `getRandomDiagnosticPretestQuestions()` — `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
-3. Answers are stored in component state; score computed by comparing selected index to `correctAnswerIndex` — `src/dashboard/pages/DiagnosticPretestPage.tsx`
+2. Questions are selected adaptively (CAT-style) using `getCATPretestInitialQuestions()` + `getCATPretestNextQuestion()` and capped at 15 points — `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
+3. Answers are stored in component state; score computed as the sum of point weights for correct answers (weights derived from Bloom level) — `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts`
 4. Competency breakdown is bucketed by `question.competencyCode` — `src/dashboard/pages/DiagnosticPretestPage.tsx`
 5. Progress is persisted periodically via `upsertAssessmentProgress(...)` (debounced) with:
    - `assessmentKey = <stage>.diagnosticAssessmentKey`
@@ -351,13 +368,22 @@ This document is generated strictly from the current codebase. Any information n
 - Responsibilities:
   - Export question pools for stages (`prelim`, `midterm`, `final`).
   - Normalize legacy question IDs for certain ranges.
-  - Randomize pre-test selection per module bucket.
-  - Weighted summative selection (unseen → wrong → random).
+  - Assign per-question point weights from Bloom level and enforce fixed points caps (pretest 15 pts, post-test 30 pts).
+    - Bloom point mapping (implementation):
+      - Remember: 1
+      - Understand: 1
+      - Apply: 1.5
+      - Analyze: 1.5
+      - Evaluate: 2
+      - Create: 2
+  - CAT-style adaptive pretest selection (`getCATPretestInitialQuestions`, `getCATPretestNextQuestion`).
+  - CAT-style adaptive post-test selection (`getCATPosttestInitialQuestions`, `getCATPosttestNextQuestion`).
 - Inputs (source + format):
   - Static question bank arrays in `src/dashboard/data/diagnosticQuestions.ts`.
 - Internal Processing (step-by-step):
-  - Build per-module buckets from the question pool.
-  - Shuffle and slice per module.
+  - Add point weights to static question banks based on Bloom level.
+  - Select questions subject to a fixed points cap (supports half-point weights).
+  - Use heuristic adaptive selection for pretest/post-test (difficulty targeting + module balancing; post-test also considers pretest gap signals).
   - Normalize legacy ID ranges (midterm and final) when mapping persisted IDs.
 - Outputs:
   - `DiagnosticQuestion[]` sets and normalization helpers.
@@ -596,7 +622,7 @@ This document is generated strictly from the current codebase. Any information n
 - Responsibilities:
   - Load diagnostic record and (if present) summative record to select reviewer source.
   - Let user pick `reviewerPreference`.
-  - Build question categories: wrong / unseen / correct.
+  - Build question categories: wrong / correct (unseen is folded into “needs review” for AI outputs; flashcards may still include unseen as extra practice cards).
   - Generate reviewer output via OpenAI proxy (or fallback) and persist to Firestore.
   - Save narration script inline/chunks for non-flashcard preferences.
 - Inputs (source + format):
@@ -606,7 +632,7 @@ This document is generated strictly from the current codebase. Any information n
 - Internal Processing (step-by-step):
   1. Resolve active stage and load diagnostic + optional summative record.
   2. Build `competencyBreakdown` from stored record or recompute from questions + selected answers.
-  3. Derive wrong/correct/unseen question lists.
+  3. Derive wrong/correct question lists (and optionally unseen practice cards for flashcards).
   4. If preference is flashcards: set `reviewerOutput = 'FLASHCARD_READY'`.
   5. Else call `sendOpenAIChat` with system/user messages and capture returned content.
   6. If AI output is empty/unavailable: build fallback reviewer.
@@ -636,10 +662,10 @@ This document is generated strictly from the current codebase. Any information n
   - `src/dashboard/pages/ReviewLandingPage.tsx`
 
 ### Module: Flashcard Review Page
-- Purpose: Provide an interactive flashcard review flow based on diagnostic answers and unseen questions.
+- Purpose: Provide an interactive flashcard review flow based on diagnostic answers (wrong/correct), while also including unseen questions as extra practice cards (unseen is not shown as a separate UI stat).
 - Responsibilities:
   - Load diagnostic record’s `questionIds` and `selectedAnswers`.
-  - Compute wrong/correct/unseen question sets from stage pool.
+  - Compute wrong/correct question sets from saved answers, and unseen questions from the stage pool.
   - Build a combined flow list and group cards by `module` into decks.
 - Inputs (source + format):
   - Diagnostic record answers and question IDs — `src/services/assessmentProgress.ts`
@@ -653,7 +679,7 @@ This document is generated strictly from the current codebase. Any information n
 - Purpose: Convert a reviewer script into chapters and play them using browser SpeechSynthesis.
 - Responsibilities:
   - Load reviewer script (inline/chunks) from diagnostic record.
-  - Split script blocks by blank lines into chapters; assign priority based on keywords (wrong/unseen/correct); reorder chapters.
+  - Split script blocks by blank lines into chapters; assign priority based on keywords (wrong/correct) and reorder chapters.
   - Use SpeechSynthesis voices; select preferred voice when available; play/pause/skip controls.
 - Inputs (source + format):
   - Reviewer script (string) — `src/services/assessmentProgress.ts:loadReviewerNarrationScript`
@@ -667,7 +693,7 @@ This document is generated strictly from the current codebase. Any information n
 - Purpose: Render a cheatsheet-style reviewer and export it as PNG or PDF.
 - Responsibilities:
   - Load reviewer script (inline/chunks) and normalize into blocks and Q/A lines.
-  - Categorize blocks by title keywords (wrong/unseen/correct).
+  - Categorize blocks by title keywords (wrong/correct).
   - Export rendered DOM to PNG/PDF using `html2canvas` and `jsPDF`.
 - Inputs (source + format):
   - Reviewer script from Firestore
@@ -678,9 +704,9 @@ This document is generated strictly from the current codebase. Any information n
   - `src/dashboard/pages/CheatsheetReviewPage.tsx`
 
 ### Module: Summative Post-test Page
-- Purpose: Conduct summative assessment with weighted question selection, attempt tracking, and locking.
+- Purpose: Conduct summative assessment with CAT-style adaptive question selection, attempt tracking, and locking.
 - Responsibilities:
-  - Generate question set using `getWeightedSummativeQuestions`.
+  - Generate question set using `getCATPosttestInitialQuestions` + `getCATPosttestNextQuestion` (capped at 30 points).
   - Persist in-progress state (answers, questionIds, index).
   - On submission:
     - Append an attempt detail
@@ -835,55 +861,62 @@ This document is generated strictly from the current codebase. Any information n
 - Source reference:
   - `src/dashboard/data/learningStage.ts:areStageModulesCompleted`
 
-### Algorithm: Random Diagnostic Pre-test Set (per module bucket)
-- Purpose: Build a randomized pre-test set by module.
-- Trigger condition: Initial diagnostic pre-test initialization.
+### Algorithm: CAT Diagnostic Pre-test (adaptive, point-capped)
+- Purpose: Build an adaptive pre-test question sequence capped at 15 points.
+- Trigger condition: Diagnostic pre-test flow (as the learner progresses through questions).
 - Input data:
   - Stage question pool (`prelim` / `midterm` / `final`)
-  - `itemsPerModule` (default `5`)
-- Step-by-step execution:
-  1. Bucket questions by `question.module`.
-  2. For each bucket:
-     - Shuffle (in-place pool copy) and take `slice(0, itemsPerModule)`.
-  3. Shuffle the combined selections.
-- Output:
-  - `DiagnosticQuestion[]`
-- Source reference:
-  - `src/dashboard/data/diagnosticQuestions.ts:getRandomDiagnosticPretestQuestions`
-
-### Algorithm: Summative Weighted Question Selection (unseen → wrong → random)
-- Purpose: Generate a summative question set emphasizing learning gaps.
-- Trigger condition: Summative post-test generation and retake flow.
-- Input data:
-  - `questionIds: number[]`
+  - `questionIds: number[]` (asked so far)
   - `selectedAnswers: Record<number, number>`
-  - `itemsPerModule` (default in page is `10`)
-  - `stage`
+  - Point weights derived from Bloom level
 - Step-by-step execution:
-  1. Normalize legacy IDs (midterm/final ranges) for stage.
-  2. Build `pretestQuestionSet` from normalized IDs.
-  3. Bucket stage pool by module.
-  4. For each module bucket, sort with:
-     - unseen first (`!pretestQuestionSet.has(id)`)
-     - then wrong within the pretest set
-     - else random tie-breaker.
-  5. Slice `itemsPerModule` and shuffle final list.
+  1. Start with `getCATPretestInitialQuestions(stage)` (starter question selection).
+  2. When the learner is on the last currently-generated question, compute a next candidate with `getCATPretestNextQuestion({ stage, questionIds, selectedAnswers, maxTotalPoints: 15 })`.
+  3. Heuristic next-question selection (implementation-derived):
+     - Estimate performance from earned points vs total points so far.
+     - Choose a target difficulty weight (1, 1.5, or 2 points).
+     - Prefer modules with fewer asked questions (module balancing).
+     - Choose an unseen question that fits remaining points under the cap.
+  4. Stop adding questions when no candidate fits or the points cap is reached.
 - Output:
-  - `DiagnosticQuestion[]`
+  - `DiagnosticQuestion[]` (built incrementally; saved `questionIds` persist the generated set)
 - Source reference:
-  - `src/dashboard/data/diagnosticQuestions.ts:getWeightedSummativeQuestions`
-  - `src/dashboard/data/diagnosticQuestions.ts:weightedSortForModule`
+  - `src/dashboard/data/diagnosticQuestions.ts:getCATPretestInitialQuestions`
+  - `src/dashboard/data/diagnosticQuestions.ts:getCATPretestNextQuestion`
+
+### Algorithm: CAT Summative Post-test (adaptive, point-capped)
+- Purpose: Build an adaptive post-test question sequence capped at 30 points.
+- Trigger condition: Summative post-test generation and progression.
+- Input data:
+  - Pretest `questionIds` and `selectedAnswers` (used as gap signal)
+  - Post-test asked `questionIds` and current `selectedAnswers`
+  - Stage question pool (`prelim` / `midterm` / `final`)
+- Step-by-step execution:
+  1. Initialize with `getCATPosttestInitialQuestions({ stage, pretestQuestionIds, pretestSelectedAnswers })`.
+     - Prefers questions not in the pretest set when available.
+  2. When the learner is on the last currently-generated question, compute a next candidate with `getCATPosttestNextQuestion({ stage, pretestQuestionIds, pretestSelectedAnswers, posttestQuestionIds, posttestSelectedAnswers, maxTotalPoints: 30 })`.
+  3. Heuristic next-question selection (implementation-derived):
+     - Estimate current post-test performance from earned vs total points so far.
+     - Choose a target difficulty weight (1, 1.5, or 2 points).
+     - Prioritize modules with larger pretest “gap” (weighted wrongness), while also balancing module coverage.
+     - Choose an unseen question that fits remaining points under the cap.
+  4. Stop adding questions when no candidate fits or the points cap is reached.
+- Output:
+  - `DiagnosticQuestion[]` (built incrementally; saved `questionIds` persist the generated set)
+- Source reference:
+  - `src/dashboard/data/diagnosticQuestions.ts:getCATPosttestInitialQuestions`
+  - `src/dashboard/data/diagnosticQuestions.ts:getCATPosttestNextQuestion`
 
 ### Algorithm: Competency Breakdown Computation (diagnostic)
 - Purpose: Compute per-competency correctness totals and percentages.
 - Trigger condition: Diagnostic pre-test page render and persistence.
 - Input data:
-  - `questions[]` with `competencyCode`, `correctAnswerIndex`, `id`
+  - `questions[]` with `competencyCode`, `correctAnswerIndex`, `id`, `weight`
   - `selectedAnswers: Record<number, number>`
 - Step-by-step execution:
   1. For each question, initialize bucket if needed.
-  2. Compare selected answer to correct index and increment `correct`.
-  3. Increment `total` per competency.
+  2. Compare selected answer to correct index and increment `correct` by `weight` when correct.
+  3. Increment `total` per competency by `weight`.
   4. Compute `percentage = (correct/total)*100` (rounded to 2 decimals in some pages).
 - Output:
   - `AssessmentCompetencyBreakdown`
@@ -891,7 +924,7 @@ This document is generated strictly from the current codebase. Any information n
   - `src/dashboard/pages/DiagnosticPretestPage.tsx`
   - `src/dashboard/pages/PersonalizedStudyPlanPage.tsx:buildCompetencyBreakdown`
 
-### Algorithm: Reviewer Prompt Construction (wrong/unseen/correct priority)
+### Algorithm: Reviewer Prompt Construction (wrong/correct priority)
 - Purpose: Build a deterministic prompt that constrains the AI to use provided data only.
 - Trigger condition: Reviewer generation for non-flashcard preferences.
 - Input data:
@@ -999,14 +1032,10 @@ This document is generated strictly from the current codebase. Any information n
 
 ### Gap detection criteria
 - Gap threshold in `generateResult` is `0.75` — `src/services/assessmentProgress.ts`
-- Summative questions emphasize unseen and wrong questions from the pretest — `src/dashboard/data/diagnosticQuestions.ts`
+- Summative question selection uses pretest performance as a gap signal and adapts difficulty/module focus during the post-test (CAT-style, capped at 30 points) — `src/dashboard/data/diagnosticQuestions.ts`, `src/dashboard/pages/SummativePosttestPage.tsx`
 
 ### Reinforcement triggers
-- Reviewer prompt and review flows prioritize:
-  1. Wrong answers
-  2. Unseen questions
-  3. Correct answers
-  — `src/dashboard/data/reviewerPromptBuilder.ts`, `src/dashboard/pages/FlashcardReviewPage.tsx`
+- Reviewer prompt and review flows prioritize wrong answers first, then correct-answer reinforcement (flashcards may also include unseen questions as extra practice cards) — `src/dashboard/data/reviewerPromptBuilder.ts`, `src/dashboard/pages/FlashcardReviewPage.tsx`
 
 ---
 
@@ -1200,7 +1229,7 @@ Source reference: `src/routes/AppRoutes.tsx`, `src/routes/paths.ts`
 - Input:
   - Reviewer preference and stored reviewer output; diagnostic question pool and saved answers for flashcards — `src/dashboard/pages/*ReviewPage.tsx`
 - Processing:
-  - Flashcards: wrong/unseen/correct ordering, grouped into module decks.
+  - Flashcards: show wrong/correct stats, include unseen as extra practice cards, grouped into module decks.
   - Audiobook: parse script blocks to chapters and speak via SpeechSynthesis.
   - Cheatsheet: parse and export via html2canvas/jsPDF.
 - Output:
@@ -1208,7 +1237,7 @@ Source reference: `src/routes/AppRoutes.tsx`, `src/routes/paths.ts`
 
 #### 12.5 Posttest (Summative)
 - Input:
-  - Weighted question set derived from pretest performance — `src/dashboard/data/diagnosticQuestions.ts`
+  - CAT-style adaptive question sequence derived from pretest performance signals (point-capped at 30) — `src/dashboard/data/diagnosticQuestions.ts`, `src/dashboard/pages/SummativePosttestPage.tsx`
 - Processing:
   - Attempt scoring, pass/fail check, attempt history updates, lock logic.
 - Output:
@@ -1389,11 +1418,11 @@ The items below are based on concrete implementation details in the repository:
 | User profile persistence | `src/services/userProfiles.ts`, `src/dashboard/pages/ProfilePage.tsx` | Upsert merge with `serverTimestamp()` | `userProfiles/{uid}` | Firestore (SDK) |
 | Module viewing + progress | `src/dashboard/pages/ModuleViewerPage.tsx`, `src/services/moduleProgress.ts` | Weighted overall progress + debounce | `userProfiles/{uid}/ModuleProgress/{moduleId}` | Firestore (SDK) |
 | Stage gating | `src/dashboard/data/learningStage.ts`, `src/routes/AppRoutes.tsx` | Resolve stage + gate redirects | Assessment progress records by key | Firestore (SDK) |
-| Diagnostic pre-test | `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts` | Random selection per module bucket + scoring | `AssessmentProgress/{diagnosticKey}` | Firestore (SDK) |
+| Diagnostic pre-test | `src/dashboard/pages/DiagnosticPretestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts` | CAT-style adaptive selection (point-capped) + weight-based scoring | `AssessmentProgress/{diagnosticKey}` | Firestore (SDK) |
 | Gap analysis metrics | `src/dashboard/pages/GapAnalysisPage.tsx`, `src/services/assessmentProgress.ts` | `generateResult` (gaps; theta computed) | Reads diagnostic record; uses derived mapping | Firestore (SDK) |
 | Reviewer generation | `src/dashboard/pages/PersonalizedStudyPlanPage.tsx`, `src/dashboard/data/reviewerPromptBuilder.ts` | Prompt build + AI call + fallback + script chunking | `AssessmentProgress` + optional `ReviewerNarrationChunks` | `/api/openai/chat` (POST) |
-| Review modes | `src/dashboard/pages/*ReviewPage.tsx` | Wrong/unseen/correct ordering; chapter parsing; Q/A parsing | Reviewer script loaded from Firestore | Firestore (SDK) |
-| Summative post-test | `src/dashboard/pages/SummativePosttestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts` | Weighted summative selection + attempt lock | `AssessmentProgress/{summativeKey}` | Firestore (SDK) |
+| Review modes | `src/dashboard/pages/*ReviewPage.tsx` | Wrong/correct prioritization (unseen as flashcard-only practice); chapter parsing; Q/A parsing | Reviewer script loaded from Firestore | Firestore (SDK) |
+| Summative post-test | `src/dashboard/pages/SummativePosttestPage.tsx`, `src/dashboard/data/diagnosticQuestions.ts` | CAT-style adaptive selection (point-capped) + attempt lock | `AssessmentProgress/{summativeKey}` | Firestore (SDK) |
 | Learning results | `src/dashboard/pages/LearningResultsPage.tsx` | Improvement computation (`post - pre`) | Reads diagnostic + summative records | Firestore (SDK) |
 | Certification | `src/dashboard/pages/CertificationPage.tsx` | Render + html2canvas + jsPDF export | Reads final summative + module progress | Firestore (SDK) |
 | Admin console | `src/admin/pages/AdminDashboardPage.tsx`, `src/services/admin.ts` | CollectionGroup metrics + reset/delete | `userProfiles`, `AssessmentProgress`, `ModuleProgress` | Firestore (SDK) |
