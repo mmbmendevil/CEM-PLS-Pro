@@ -4,25 +4,42 @@ export type DiagnosticQuestion = {
   options: string[]
   correctAnswerIndex: number
   module: string
-  bloomLevel: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate'
+  bloomLevel: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create'
+  weight: number
   competencyCode: string
 }
 
 export type DiagnosticQuestionStage = 'prelim' | 'midterm' | 'final'
 
-const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
+const BLOOM_LEVEL_WEIGHTS: Record<DiagnosticQuestion['bloomLevel'], number> = {
+  Remember: 1,
+  Understand: 1,
+  Apply: 2,
+  Analyze: 3,
+  Evaluate: 4,
+  Create: 4,
+}
+
+const addWeights = (questions: Omit<DiagnosticQuestion, 'weight'>[]): DiagnosticQuestion[] => {
+  return questions.map((question) => ({
+    ...question,
+    weight: BLOOM_LEVEL_WEIGHTS[question.bloomLevel],
+  }))
+}
+
+const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 1,
     module: 'Memory Hierarchy',
-    question: 'Why is memory hierarchy required in a computer system?',
+    question: 'You are designing a computer with a strict budget but you still need low average memory access time and large total capacity. Which design choice is the BEST way to meet these competing goals?',
     options: [
-      'To eliminate memory devices',
-      'To optimize available memory with varying speed and cost',
-      'To increase processor clock speed',
-      'To simplify system architecture',
+      'Use only a single large, fast memory technology for everything',
+      'Use a hierarchy of small fast memories plus larger slower memories to balance speed and cost',
+      'Eliminate caches so memory access is predictable',
+      'Rely on secondary storage as the primary working memory',
     ],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'MH',
   },
   {
@@ -55,28 +72,28 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 5,
     module: 'Memory Hierarchy',
-    question: 'What is the function of main memory (RAM)?',
+    question: 'While rendering a video, the CPU needs to quickly read and write the data it is actively working on. Which memory is primarily used to store this data during execution?',
     options: ['Store permanent data only', 'Store data currently used by CPU', 'Replace cache memory', 'Provide backup storage'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'MH',
   },
   {
     id: 6,
     module: 'Memory Hierarchy',
-    question: 'Which type of RAM uses capacitors and requires refreshing?',
-    options: ['SRAM', 'DRAM', 'ROM', 'Cache'],
+    question: 'You are selecting main memory for a budget laptop. You need large capacity at low cost per bit, and periodic refresh power is acceptable. Which memory technology is the best choice for the main memory?',
+    options: ['SRAM', 'DRAM', 'ROM', 'Flash memory'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Evaluate',
     competencyCode: 'MH',
   },
   {
     id: 7,
     module: 'Memory Hierarchy',
-    question: 'Which memory type has the largest capacity but slowest access time?',
+    question: 'You need to store terabytes of archived logs at the lowest cost per GB, and high latency is acceptable. Which memory type is the BEST fit?',
     options: ['Registers', 'Cache', 'Main Memory', 'Secondary Storage'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'MH',
   },
   {
@@ -85,7 +102,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What happens to memory capacity as we move down the hierarchy?',
     options: ['Decreases', 'Becomes unstable', 'Increases', 'Remains constant'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'MH',
   },
   {
@@ -94,16 +111,16 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What happens to access time as we move from top to bottom?',
     options: ['Decreases', 'Increases', 'Remains equal', 'Becomes zero'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'MH',
   },
   {
     id: 10,
     module: 'Memory Hierarchy',
-    question: 'Which is a disadvantage of memory hierarchy?',
-    options: ['Improves performance', 'Reduces cost', 'Complex system design', 'Faster access time'],
+    question: 'You are deciding whether to add more cache levels to improve performance. Which trade-off is a real disadvantage you must plan for?',
+    options: ['Guaranteed lower power usage', 'Eliminates the need for main memory', 'More complex system design and verification', 'Always reduces hardware cost'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'MH',
   },
   {
@@ -112,7 +129,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the ideal assumption between processor and memory performance?',
     options: ['Memory is faster than processor', 'They operate at similar speeds', 'Memory replaces processor', 'Processor does not access memory'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'MH',
   },
   {
@@ -121,7 +138,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the current real-world issue in processor-memory interaction?',
     options: ['Memory is faster than processors', 'Both have equal growth', 'Processors are much faster than memory', 'Memory is no longer needed'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'MH',
   },
   {
@@ -141,10 +158,10 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 14,
     module: 'Memory Hierarchy',
-    question: 'Which memory is very fast but expensive and low density?',
+    question: 'You are designing an L1 cache where access latency must be extremely low and capacity can be small, even if cost per bit is high. Which memory technology best fits this requirement?',
     options: ['DRAM', 'Disk', 'Magnetic Tape', 'SRAM'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Evaluate',
     competencyCode: 'MH',
   },
   {
@@ -153,7 +170,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which memory offers higher density but slower speed than SRAM?',
     options: ['DRAM', 'Cache', 'Registers', 'CPU'],
     correctAnswerIndex: 0,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'MH',
   },
   {
@@ -168,10 +185,10 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 17,
     module: 'Memory Hierarchy',
-    question: 'What principle allows memory hierarchy to work efficiently?',
+    question: 'A profiler shows high cache hit rates because a program repeatedly accesses a small working set and often accesses nearby addresses. Which principle best explains why caching works well here?',
     options: ['Instruction pipelining', 'Locality of reference', 'Parallel processing', 'Virtualization'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'MH',
   },
   {
@@ -198,7 +215,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does AMAT measure?',
     options: ['Total memory size', 'Average access time of memory hierarchy', 'Number of cache levels', 'Processor speed'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'MH',
   },
   {
@@ -213,10 +230,10 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 22,
     module: 'CPU Components',
-    question: 'Where is the CPU physically located in a computer?',
+    question: 'When assembling a desktop PC, where do you install the CPU so it can connect to the system bus and memory through the chipset?',
     options: ['Hard disk', 'Power supply', 'Motherboard socket', 'Monitor'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'CPU',
   },
   {
@@ -243,7 +260,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which CPU component stores data temporarily during processing?',
     options: ['Registers and cache', 'Optical disk', 'Magnetic tape', 'External storage'],
     correctAnswerIndex: 0,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'CPU',
   },
   {
@@ -252,7 +269,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What happens during the fetch stage of the CPU cycle?',
     options: ['Data is deleted', 'Instructions are executed', 'Instructions are retrieved from memory', 'Results are stored permanently'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'CPU',
   },
   {
@@ -261,7 +278,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the purpose of the decode stage?',
     options: ['Store results', 'Interpret the instruction', 'Fetch new data', 'Execute operations'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'CPU',
   },
   {
@@ -270,16 +287,21 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the role of the execute stage?',
     options: ['Retrieve instructions', 'Translate instructions', 'Perform the operation', 'Store data in disk'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'CPU',
   },
   {
     id: 29,
     module: 'CPU Components',
-    question: 'Which type of CPU can handle multiple tasks at once due to multiple cores?',
-    options: ['Single-core CPU', 'Multi-core CPU', 'Analog CPU', 'External CPU'],
+    question: 'A laptop must run video calls, a browser, and background updates at the same time under a power limit. Which CPU type is the BEST choice to handle multiple tasks efficiently?',
+    options: [
+      'Single-core CPU with a higher clock speed',
+      'Multi-core CPU that can run tasks on separate cores',
+      'Analog CPU optimized for continuous signals',
+      'External CPU that is not on the system motherboard',
+    ],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'CPU',
   },
   {
@@ -288,7 +310,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What factor determines how many instructions a CPU can process per second?',
     options: ['Cache size', 'Core color', 'Clock speed', 'Storage type'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'CPU',
   },
   {
@@ -308,10 +330,10 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 32,
     module: 'CPU Components',
-    question: 'What is the main role of the Control Unit in instruction processing?',
+    question: 'A CPU is executing arithmetic correctly, but instructions are not being fetched and sequenced properly between stages. Which role is responsible for coordinating the instruction sequence and control signals?',
     options: ['Perform arithmetic operations', 'Store results', 'Manage instruction sequence and execution', 'Display output'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'CPU',
   },
   {
@@ -320,16 +342,21 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which operation is performed by the ALU?',
     options: ['Fetch instructions', 'Decode instructions', 'Perform logical comparisons', 'Store instructions'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'CPU',
   },
   {
     id: 34,
     module: 'CPU Components',
-    question: 'What problem does cache memory help solve?',
-    options: ['Power consumption', 'Heat generation', 'Memory bottleneck', 'Input errors'],
-    correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    question: 'A mobile CPU core frequently stalls waiting for data from DRAM. You can add only one feature due to strict area and power limits. Which design change best addresses the underlying problem?',
+    options: [
+      'Add an on-chip cache to exploit locality and reduce average memory access time',
+      'Increase the CPU clock speed without changing the memory system',
+      'Move registers off-chip to reduce die area',
+      'Disable pipelining to simplify the control unit',
+    ],
+    correctAnswerIndex: 0,
+    bloomLevel: 'Evaluate',
     competencyCode: 'CPU',
   },
   {
@@ -365,7 +392,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the function of the Memory Address Register (MAR)?',
     options: ['Store instruction result', 'Hold memory address for access', 'Store current instruction', 'Perform calculations'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'CPU',
   },
   {
@@ -374,7 +401,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does the Memory Data Register (MDR) contain?',
     options: ['Address only', 'Instruction count', 'Data being transferred to or from memory', 'Clock signals'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'CPU',
   },
   {
@@ -383,16 +410,16 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the role of the accumulator register?',
     options: ['Store memory addresses', 'Control CPU timing', 'Hold intermediate ALU results', 'Store program instructions permanently'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'CPU',
   },
   {
     id: 41,
     module: 'Pipelining and Hazards',
-    question: 'What is pipelining in CPU architecture?',
+    question: 'A CPU improves throughput by overlapping work so different instructions are in different stages (fetch, decode, execute, etc.) at the same time. What CPU technique is being used?',
     options: ['Executing one instruction at a time', 'Dividing instructions into stages executed in parallel', 'Storing instructions in memory', 'Reducing CPU clock speed'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'PIPE',
   },
   {
@@ -401,7 +428,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the main purpose of pipelining?',
     options: ['Increase memory size', 'Reduce instruction execution stages', 'Enhance overall CPU performance', 'Eliminate instruction decoding'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'PIPE',
   },
   {
@@ -416,10 +443,10 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 44,
     module: 'Pipelining and Hazards',
-    question: 'What is the role of pipeline registers?',
+    question: 'In a pipelined CPU, each stage must pass its intermediate results to the next stage on every clock cycle. Which component holds these intermediate values between stages?',
     options: ['Perform arithmetic operations', 'Store intermediate data between stages', 'Execute instructions', 'Control input devices'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'PIPE',
   },
   {
@@ -446,7 +473,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What occurs during the decode stage?',
     options: ['Instruction is executed', 'Instruction is interpreted', 'Data is stored', 'Memory is cleared'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'PIPE',
   },
   {
@@ -455,7 +482,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the result after all pipeline stages are completed?',
     options: ['Input data', 'Intermediate data', 'Final output', 'Cache data'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'PIPE',
   },
   {
@@ -464,7 +491,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What type of processing does pipelining represent?',
     options: ['Sequential processing', 'Parallel processing', 'Batch processing', 'Manual processing'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'PIPE',
   },
   {
@@ -473,7 +500,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is latency in pipelining?',
     options: ['Number of instructions per second', 'Time to complete one instruction', 'Size of pipeline stages', 'Number of registers used'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'PIPE',
   },
   {
@@ -482,7 +509,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the main advantage of pipelining compared to non-pipelined execution?',
     options: ['Simpler design', 'Lower cost', 'Higher throughput', 'Fewer instructions'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'PIPE',
   },
   {
@@ -491,7 +518,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What happens in a non-pipelined CPU during instruction execution?',
     options: ['Multiple instructions are executed simultaneously', 'CPU components remain idle during parts of the cycle', 'All stages run in parallel', 'No decoding occurs'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'PIPE',
   },
   {
@@ -515,19 +542,29 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 55,
     module: 'Pipelining and Hazards',
-    question: 'Why does direct addressing reduce pipeline efficiency?',
-    options: ['It removes instructions', 'It requires extra memory access', 'It increases clock speed', 'It simplifies execution'],
-    correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    question: 'You are optimizing code for a pipelined CPU where a data-memory access can cost tens of cycles on a miss. To maximize pipeline throughput, which choice is the BEST for most frequently executed operations?',
+    options: [
+      'Prefer register/immediate operands to avoid extra memory reads from direct addressing',
+      'Prefer direct addressing so each instruction fetches operands from memory',
+      'Prefer direct addressing because it always reduces CPI',
+      'Use direct addressing to simplify the control unit even if it adds stalls',
+    ],
+    correctAnswerIndex: 0,
+    bloomLevel: 'Evaluate',
     competencyCode: 'PIPE',
   },
   {
     id: 56,
     module: 'Pipelining and Hazards',
-    question: 'What type of hazard occurs due to resource conflicts?',
-    options: ['Data hazard', 'Control hazard', 'Structural hazard', 'Logical hazard'],
-    correctAnswerIndex: 2,
-    bloomLevel: 'Remember',
+    question: 'A 5-stage pipelined CPU uses a single memory port for both instruction fetch and data access, causing frequent stalls on loads and stores. With limited extra area available, which redesign would you implement to remove the root cause?',
+    options: [
+      'Use separate instruction and data caches (or a dual-ported cache) to allow simultaneous access',
+      'Add data forwarding paths to resolve RAW hazards',
+      'Add branch prediction to reduce control hazards',
+      'Increase pipeline depth to reduce the clock period',
+    ],
+    correctAnswerIndex: 0,
+    bloomLevel: 'Evaluate',
     competencyCode: 'PIPE',
   },
   {
@@ -536,7 +573,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What type of hazard occurs when instructions depend on previous results?',
     options: ['Structural hazard', 'Data hazard', 'Control hazard', 'Memory hazard'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'PIPE',
   },
   {
@@ -545,7 +582,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which hazard is caused by branch instructions?',
     options: ['Data hazard', 'Structural hazard', 'Control hazard', 'Execution hazard'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'PIPE',
   },
   {
@@ -554,7 +591,7 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does throughput measure in pipelining?',
     options: ['Time per instruction', 'Number of instructions completed per unit time', 'Size of memory', 'Number of pipeline stages'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'PIPE',
   },
   {
@@ -563,12 +600,12 @@ const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is one disadvantage of pipelining?',
     options: ['Low efficiency', 'Simple design', 'Complex implementation', 'Reduced performance'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'PIPE',
   },
-]
+])
 
-const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
+const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 61,
     module: 'Cache Organization',
@@ -581,10 +618,15 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 62,
     module: 'Cache Organization',
-    question: 'Why is cache memory considered faster than main memory?',
-    options: ['It is located closer to the CPU', 'It stores more instructions', 'It uses magnetic storage', 'It operates at lower speed'],
+    question: 'You are tuning an embedded system with strict power limits where DRAM latency is a bottleneck. You need the BEST way to reduce average data access latency without increasing DRAM power. Which change should you choose?',
+    options: [
+      'Add a small on-chip cache close to the CPU to exploit locality and reduce average access time',
+      'Increase DRAM capacity to reduce access latency',
+      'Use magnetic storage for frequently accessed working data',
+      'Lower DRAM frequency to reduce latency and improve throughput',
+    ],
     correctAnswerIndex: 0,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'CM',
   },
   {
@@ -599,10 +641,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 64,
     module: 'Cache Organization',
-    question: 'Which metric is commonly used to evaluate cache performance?',
+    question: 'When comparing two cache designs, which metric most directly captures how often requests are served by the cache instead of main memory?',
     options: ['Clock frequency', 'Bandwidth', 'Hit ratio', 'Latency rate'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'CM',
   },
   {
@@ -617,10 +659,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 66,
     module: 'Cache Organization',
-    question: 'Which component uniquely identifies a memory block in a cache line?',
+    question: 'You are decoding a cache address split into tag/index/offset fields. Which field uniquely identifies which memory block is currently stored in a cache line?',
     options: ['Offset', 'Index', 'Register', 'Tag'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'CM',
   },
   {
@@ -629,25 +671,25 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the main advantage of fully associative mapping?',
     options: ['Simpler implementation', 'Faster indexing', 'Flexibility in block placement', 'Lower hardware cost'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'CM',
   },
   {
     id: 68,
     module: 'Cache Organization',
-    question: 'How does set-associative mapping improve cache performance?',
-    options: ['Eliminates cache misses', 'Increases memory size', 'Removes need for tags', 'Reduces conflict misses'],
-    correctAnswerIndex: 3,
-    bloomLevel: 'Analyze',
+    question: 'You are choosing a cache mapping scheme for an L1 cache. You need better hit rate than direct-mapped, but you cannot afford the full hardware cost of fully associative. Which mapping is the BEST compromise?',
+    options: ['Direct mapping', 'Fully associative mapping', 'Set-associative mapping', 'No cache (always use main memory)'],
+    correctAnswerIndex: 2,
+    bloomLevel: 'Evaluate',
     competencyCode: 'CM',
   },
   {
     id: 69,
     module: 'Cache Organization',
-    question: 'Which principle states that recently accessed data is likely to be accessed again?',
+    question: 'A loop repeatedly updates the same few variables, leading to many cache hits even though the program runs for a long time. Which locality principle explains this behavior?',
     options: ['Spatial locality', 'Logical locality', 'Temporal locality', 'Sequential locality'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'CM',
   },
   {
@@ -656,16 +698,16 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Why is cache memory more expensive than main memory?',
     options: ['It stores permanent data', 'It uses faster and more complex hardware', 'It has larger capacity', 'It requires less power'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Understand',
     competencyCode: 'CM',
   },
   {
     id: 71,
     module: 'Cache Organization',
-    question: 'Why did traditional object-oriented design reduce cache efficiency in games?',
+    question: 'A game engine must hit 60 FPS on a CPU with small caches. You can either keep entity data in scattered object graphs or restructure data for more contiguous access. Which reasoning BEST supports moving away from traditional object-oriented design for cache efficiency?',
     options: ['It used excessive CPU registers', 'It reduced processing speed intentionally', 'It scattered data across memory locations', 'It avoided loops in execution'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'CM',
   },
   {
@@ -689,10 +731,15 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 74,
     module: 'Cache Organization',
-    question: 'How does spatial locality improve performance?',
-    options: ['By accessing distant memory locations', 'By increasing CPU speed', 'By accessing nearby memory addresses', 'By reducing cache size'],
+    question: 'A CPU has 64-byte cache lines and your code is memory-bound. Which access pattern is the BEST choice to exploit spatial locality and reduce cache misses?',
+    options: [
+      'Access memory locations that are far apart to avoid cache evictions',
+      'Use random indexing so the cache cannot predict future accesses',
+      'Access consecutive memory addresses so each cache line fetch is reused',
+      'Use a large stride so each access lands in a different cache line',
+    ],
     correctAnswerIndex: 2,
-    bloomLevel: 'Apply',
+    bloomLevel: 'Evaluate',
     competencyCode: 'CM',
   },
   {
@@ -701,7 +748,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the commonly used size of a cache line?',
     options: ['32 bytes', '16 bytes', '128 bytes', '64 bytes'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'CM',
   },
   {
@@ -734,10 +781,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 79,
     module: 'Cache Organization',
-    question: 'What trade-off is associated with fully associative cache?',
+    question: 'You are considering a fully associative cache to reduce misses, but your design has tight area and timing constraints. Which statement BEST captures the trade-off of fully associative caches?',
     options: ['Low flexibility but high speed', 'High flexibility but increased complexity', 'Low cost but high miss rate', 'Large size but slow access'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Evaluate',
     competencyCode: 'CM',
   },
   {
@@ -746,7 +793,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Why are n-way set associative caches commonly used in real systems?',
     options: ['They eliminate all cache misses', 'They require no hardware', 'They maximize storage capacity', 'They balance speed and flexibility'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Understand',
     competencyCode: 'CM',
   },
   {
@@ -761,10 +808,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 82,
     module: 'Virtual Memory and ECC',
-    question: 'Why is direct access to physical memory considered unsafe?',
+    question: 'Two user programs run at the same time. If both could write directly to physical addresses, one program could corrupt the other\'s data or code. Why is this unsafe?',
     options: ['It reduces system performance', 'It increases memory size', 'It allows processes to overwrite each other\'s memory', 'It prevents multitasking'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'VM',
   },
   {
@@ -788,10 +835,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 85,
     module: 'Virtual Memory and ECC',
-    question: 'What is a key limitation of 32-bit systems regarding memory?',
+    question: 'A 32-bit system uses 32-bit addresses for memory locations. In the simplest case, what is the maximum amount of addressable memory space?',
     options: ['Limited to 2 GB RAM', 'Cannot run multiple programs', 'Limited to 4 GB addressable memory', 'Cannot use virtual memory'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'VM',
   },
   {
@@ -815,10 +862,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 88,
     module: 'Virtual Memory and ECC',
-    question: 'What happens during swapping in virtual memory?',
+    question: 'An OS must keep applications running during memory pressure instead of terminating them, even if performance drops due to disk activity. Which mechanism BEST describes what happens during swapping?',
     options: ['Data is deleted permanently', 'Data is moved between RAM and disk', 'CPU registers are cleared', 'Cache memory is reset'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'VM',
   },
   {
@@ -836,7 +883,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is a major disadvantage of virtual memory?',
     options: ['Increased cost of RAM', 'Slower performance due to disk access', 'Reduced memory capacity', 'Elimination of multitasking'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Remember',
     competencyCode: 'VM',
   },
   {
@@ -851,10 +898,15 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 92,
     module: 'Virtual Memory and ECC',
-    question: 'What is the primary benefit of paging in memory management?',
-    options: ['Eliminates internal fragmentation', 'Eliminates external fragmentation', 'Removes need for RAM', 'Simplifies CPU design'],
+    question: 'An OS must support many processes safely. RAM has enough total free space but it is fragmented, and you must avoid long pauses from compaction. Which memory-management approach is the best choice?',
+    options: [
+      'Compaction to make free memory contiguous',
+      'Paging using fixed-size pages and frames',
+      'Require all allocations to be contiguous and deny requests otherwise',
+      'Disable memory protection to reduce overhead',
+    ],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Evaluate',
     competencyCode: 'VM',
   },
   {
@@ -878,10 +930,10 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 95,
     module: 'Virtual Memory and ECC',
-    question: 'What trade-off does paging introduce?',
+    question: 'An OS adopts paging to eliminate external fragmentation and avoid expensive compaction, but memory is tight. Which trade-off is the BEST description of what paging can introduce?',
     options: ['External fragmentation', 'Increased CPU usage', 'Internal fragmentation', 'Reduced memory access'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Evaluate',
     competencyCode: 'VM',
   },
   {
@@ -899,7 +951,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'How do shared pages improve memory efficiency?',
     options: ['By duplicating code across processes', 'By storing data permanently', 'By allowing multiple processes to use the same memory block', 'By reducing CPU speed'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'VM',
   },
   {
@@ -917,7 +969,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Why does virtual memory allow better multitasking?',
     options: ['It increases CPU clock speed', 'It allows more programs to run simultaneously', 'It removes disk usage', 'It simplifies hardware design'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Analyze',
     competencyCode: 'VM',
   },
   {
@@ -953,16 +1005,16 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which factor limits the effectiveness of ILP the most?',
     options: ['Clock speed', 'Cache size', 'Data dependencies between instructions', 'Disk latency'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Apply',
     competencyCode: 'ILP',
   },
   {
     id: 104,
     module: 'Advanced Execution',
-    question: 'What role does the compiler play in ILP systems?',
+    question: 'To reduce stalls, a compiler reorders independent instructions and schedules them so more operations can execute each cycle. What compiler role in ILP does this describe?',
     options: ['Controls memory allocation only', 'Executes instructions directly', 'Manages hardware registers', 'Determines instruction execution order and scheduling'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'ILP',
   },
   {
@@ -980,16 +1032,16 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the primary advantage of ILP?',
     options: ['Reduced hardware complexity', 'Improved processor performance', 'Lower memory usage', 'Elimination of instruction latency'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Remember',
     competencyCode: 'ILP',
   },
   {
     id: 107,
     module: 'Advanced Execution',
-    question: 'What is a "nop" instruction used for in ILP?',
+    question: 'When scheduling instructions to avoid hazards, the compiler inserts operations that do nothing but consume a cycle so dependent instructions can wait safely. What is this instruction used for?',
     options: ['To execute arithmetic operations', 'To represent idle processor cycles', 'To store data', 'To increase clock speed'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'ILP',
   },
   {
@@ -1007,7 +1059,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which is a disadvantage of ILP?',
     options: ['Reduced throughput', 'Increased energy efficiency', 'Increased hardware complexity', 'Lower performance'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Remember',
     competencyCode: 'ILP',
   },
   {
@@ -1016,16 +1068,16 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What happens in sequential execution compared to ILP?',
     options: ['Only one instruction executes per cycle', 'Multiple instructions execute per cycle', 'Instructions execute out of order', 'No dependencies exist'],
     correctAnswerIndex: 0,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'ILP',
   },
   {
     id: 111,
     module: 'Advanced Execution',
-    question: 'What are the three main factors determining program execution time?',
+    question: 'You are comparing two compiler optimizations. To predict which version runs faster on the same CPU, which set of factors should you analyze to determine execution time?',
     options: ['Cache size, RAM size, disk speed', 'Instruction count, CPI, clock cycle time', 'CPU cores, threads, memory size', 'Bandwidth, latency, throughput'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Analyze',
     competencyCode: 'ILP',
   },
   {
@@ -1043,25 +1095,30 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What causes pipeline stalls in a processor?',
     options: ['Faster memory access', 'Instruction dependencies and hazards', 'Increased clock speed', 'Reduced instruction count'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'ILP',
   },
   {
     id: 114,
     module: 'Advanced Execution',
-    question: 'How does increasing pipeline depth affect performance?',
+    question: 'A CPU team can increase pipeline depth to raise clock frequency, but branch mispredictions and hazards will cost more cycles per event. Which option is the BEST description of this trade-off?',
     options: ['Eliminates all hazards', 'Always reduces CPI', 'Reduces clock time but increases stall overhead', 'Removes need for registers'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Evaluate',
     competencyCode: 'ILP',
   },
   {
     id: 115,
     module: 'Advanced Execution',
-    question: 'What does out-of-order execution allow?',
-    options: ['Instructions execute strictly in program order', 'Independent instructions execute before stalled ones', 'Only sequential execution', 'Elimination of dependencies'],
+    question: 'A CPU core frequently waits on cache misses, and you cannot increase clock speed due to thermal limits. To improve throughput, which capability is the BEST choice to keep useful work running while some instructions are stalled?',
+    options: [
+      'Force strict in-order execution so the pipeline is simpler and always waits for the oldest instruction',
+      'Allow independent instructions to execute before stalled ones when their operands are ready',
+      'Execute only sequentially and pause the entire core whenever any instruction stalls',
+      'Eliminate dependencies entirely so instructions never need to wait for results',
+    ],
     correctAnswerIndex: 1,
-    bloomLevel: 'Apply',
+    bloomLevel: 'Evaluate',
     competencyCode: 'ILP',
   },
   {
@@ -1070,16 +1127,16 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which hazard involves reading a value before it is written?',
     options: ['WAR', 'WAW', 'RAW', 'Control hazard'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Apply',
     competencyCode: 'ILP',
   },
   {
     id: 117,
     module: 'Advanced Execution',
-    question: 'What technique eliminates WAW and WAR hazards?',
+    question: 'In out-of-order execution, false dependencies cause WAR and WAW hazards even when instructions are logically independent. Which technique removes these hazards?',
     options: ['Branch prediction', 'Register renaming', 'Cache mapping', 'Pipelining'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'ILP',
   },
   {
@@ -1088,7 +1145,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the purpose of a reorder buffer?',
     options: ['To store cache data', 'To maintain correct instruction execution order', 'To increase memory size', 'To reduce clock cycles'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'ILP',
   },
   {
@@ -1097,7 +1154,7 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Why is branch prediction important in pipelines?',
     options: ['It reduces memory usage', 'It helps keep the pipeline filled with useful instructions', 'It increases instruction size', 'It eliminates hazards completely'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Understand',
     competencyCode: 'ILP',
   },
   {
@@ -1106,19 +1163,19 @@ const MIDTERM_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What limits further performance gains in modern pipelines?',
     options: ['Unlimited memory', 'Reduced instruction count', 'Increasing power consumption and complexity', 'Faster disk speed'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Evaluate',
+    bloomLevel: 'Understand',
     competencyCode: 'ILP',
   },
-]
+])
 
-const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
+const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
   {
     id: 121,
     module: 'Architecture Fundamentals',
-    question: 'What is the main concept of Von Neumann architecture?',
+    question: 'You are designing a microcontroller that must fetch an instruction and access data in the same cycle for performance, and extra hardware complexity is acceptable. Which architecture is the BEST choice?',
     options: ['Separate memory for data and instructions', 'Shared memory for data and instructions', 'Multiple CPUs in one system', 'Parallel processing of instructions only'],
-    correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    correctAnswerIndex: 0,
+    bloomLevel: 'Evaluate',
     competencyCode: 'AF',
   },
   {
@@ -1136,7 +1193,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is one advantage of Von Neumann architecture?',
     options: ['Complex design', 'Expensive implementation', 'Limited flexibility', 'Simplicity in design'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'AF',
   },
   {
@@ -1145,7 +1202,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the main disadvantage of Von Neumann architecture?',
     options: ['Separate memory', 'High cost', 'Bottleneck due to shared bus', 'Limited instruction set'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'AF',
   },
   {
@@ -1154,16 +1211,16 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What risk exists because data and instructions share memory in Von Neumann architecture?',
     options: ['Faster processing', 'Memory corruption', 'Reduced flexibility', 'Increased cost'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'AF',
   },
   {
     id: 126,
     module: 'Architecture Fundamentals',
-    question: 'What defines Harvard architecture?',
+    question: 'You are designing a microcontroller that must fetch an instruction and access data in the same cycle to maximize throughput, even if it increases hardware complexity. Which architecture best fits?',
     options: ['Single memory system', 'Separate memory for data and instructions', 'Shared bus system', 'Sequential processing only'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Evaluate',
     competencyCode: 'AF',
   },
   {
@@ -1178,10 +1235,10 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 128,
     module: 'Architecture Fundamentals',
-    question: 'Why is Harvard architecture faster than Von Neumann architecture?',
+    question: 'You are designing a DSP that must fetch an instruction and read sample data every cycle under a strict real-time latency target. Which design choice is the BEST reason Harvard-style designs can be faster than Von Neumann?',
     options: ['Uses fewer components', 'Uses shared memory', 'Uses separate buses for data and instructions', 'Uses slower memory'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Evaluate',
     competencyCode: 'AF',
   },
   {
@@ -1190,7 +1247,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is a disadvantage of Harvard architecture?',
     options: ['Low performance', 'Complex design', 'Shared memory issue', 'Limited processing speed'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'AF',
   },
   {
@@ -1199,7 +1256,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which system typically uses Harvard architecture?',
     options: ['Personal computers', 'Small laptops', 'Microcontrollers and signal processors', 'Gaming consoles'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'AF',
   },
   {
@@ -1208,7 +1265,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the key principle of Harvard architecture based on its origin?',
     options: ['Shared memory system', 'Separate storage for instructions and data', 'Single bus communication', 'Sequential execution only'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'AF',
   },
   {
@@ -1262,7 +1319,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the purpose of splitting L1 cache in modern CPUs?',
     options: ['Reduce memory size', 'Separate instruction and data access', 'Increase cost', 'Simplify architecture'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'AF',
   },
   {
@@ -1271,7 +1328,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the advantage of modified Harvard architecture?',
     options: ['Sequential execution', 'Reduced cache size', 'Simultaneous instruction and data access', 'Lower processing speed'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'AF',
   },
   {
@@ -1280,7 +1337,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What type of memory is used for data in Harvard architecture?',
     options: ['ROM', 'RAM', 'Cache', 'Register'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'AF',
   },
   {
@@ -1322,10 +1379,10 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 144,
     module: 'Instruction Set Architecture',
-    question: 'What is the function of data transfer instructions?',
+    question: 'Before an ALU operation, a value must be moved from memory into a register (and later stored back). Which instruction type performs this movement?',
     options: ['Perform calculations', 'Control program flow', 'Move data between memory and registers', 'Execute loops'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'ISA',
   },
   {
@@ -1334,16 +1391,16 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which instruction type controls program flow?',
     options: ['Arithmetic', 'Data transfer', 'Branch and jump', 'Logical'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'ISA',
   },
   {
     id: 146,
     module: 'Instruction Set Architecture',
-    question: 'What is the instruction length of MIPS ISA?',
+    question: 'You are designing the instruction fetch unit for a MIPS-like CPU and must choose the fixed instruction width for the pipeline. What is the instruction length of MIPS ISA?',
     options: ['16 bits', '32 bits', '64 bits', 'Variable length'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'ISA',
   },
   {
@@ -1352,7 +1409,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'Which instruction format is used for arithmetic operations in MIPS?',
     options: ['I-type', 'J-type', 'R-type', 'D-type'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'ISA',
   },
   {
@@ -1379,7 +1436,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does ISA affect in system performance?',
     options: ['Screen resolution', 'CPI and execution time', 'Keyboard input speed', 'Monitor refresh rate'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Understand',
     competencyCode: 'ISA',
   },
   {
@@ -1397,7 +1454,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What characterizes RISC architecture?',
     options: ['Complex instructions', 'Variable instruction length', 'Simple and fixed-length instructions', 'Memory-to-memory operations'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'ISA',
   },
   {
@@ -1406,7 +1463,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is a key feature of CISC architecture?',
     options: ['Fixed instruction length', 'Simple instruction set', 'Memory-to-memory operations', 'Limited addressing modes'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'ISA',
   },
   {
@@ -1415,7 +1472,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'How does RISC architecture handle memory access?',
     options: ['Direct memory execution', 'Load/store operations', 'Cache-only access', 'Disk-based access'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'ISA',
   },
   {
@@ -1430,10 +1487,10 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 156,
     module: 'Instruction Set Architecture',
-    question: 'Which architecture supports pipelining efficiently?',
+    question: 'You are designing a deeply pipelined CPU and want simple, regular instructions to keep decode fast and hazards manageable at high clock speeds. Which architecture style is the BEST fit?',
     options: ['CISC', 'RISC', 'Stack-based', 'EPIC'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'ISA',
   },
   {
@@ -1451,7 +1508,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is the purpose of the operand in an instruction?',
     options: ['Define operation', 'Provide data or address', 'Control CPU speed', 'Manage cache'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'ISA',
   },
   {
@@ -1466,10 +1523,15 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 160,
     module: 'Instruction Set Architecture',
-    question: 'What is a key difference between RISC and CISC?',
-    options: ['RISC is complex, CISC is simple', 'RISC uses variable instructions', 'RISC uses simple instructions, CISC uses complex instructions', 'Both are identical'],
-    correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    question: 'You are choosing an ISA for a high-frequency pipelined CPU where simple decoding and consistent instruction timing matter. Which option is the BEST choice and justification?',
+    options: [
+      'Choose RISC: simpler, typically fixed-length instructions that are easier to pipeline',
+      'Choose CISC: more complex instructions to reduce the number of instructions executed',
+      'Choose RISC: variable-length, complex instructions to maximize code density',
+      'Both are identical in design goals and pipeline friendliness',
+    ],
+    correctAnswerIndex: 0,
+    bloomLevel: 'Evaluate',
     competencyCode: 'ISA',
   },
   {
@@ -1493,10 +1555,10 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 163,
     module: 'Performance Analysis',
-    question: 'What limits the speedup in Amdahl\'s Law?',
+    question: 'A program is partially parallelized, but even with many processors the total speedup stops improving after a point. According to Amdahl\'s Law, what most fundamentally limits the speedup?',
     options: ['Parallel portion', 'Clock frequency', 'Number of processors', 'Sequential portion'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Analyze',
     competencyCode: 'PA',
   },
   {
@@ -1505,7 +1567,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does P represent in Amdahl\'s Law?',
     options: ['Number of processors', 'Fraction of program that can be parallelized', 'Execution time', 'Clock cycles'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'PA',
   },
   {
@@ -1514,16 +1576,16 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does N represent in Amdahl\'s Law?',
     options: ['Instruction count', 'Number of processors', 'Clock speed', 'Memory size'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Apply',
     competencyCode: 'PA',
   },
   {
     id: 166,
     module: 'Performance Analysis',
-    question: 'What happens to speedup when N approaches infinity?',
+    question: 'A team wants to keep buying more processors to speed up a workload, but the sequential portion of the program cannot be reduced. As the number of processors N approaches infinity, what happens to the overall speedup?',
     options: ['Becomes zero', 'Becomes limited by sequential portion', 'Becomes negative', 'Remains constant'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Evaluate',
     competencyCode: 'PA',
   },
   {
@@ -1550,7 +1612,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does speedup measure?',
     options: ['Memory size', 'Performance improvement', 'Instruction length', 'Cache size'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'PA',
   },
   {
@@ -1559,16 +1621,16 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'If a program is fully parallelizable (P = 1), what is the theoretical speedup?',
     options: ['Zero', 'One', 'Infinite', 'Fixed value'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Apply',
     competencyCode: 'PA',
   },
   {
     id: 171,
     module: 'Performance Analysis',
-    question: 'What is CPI in CPU performance analysis?',
-    options: ['Cycles Per Instruction', 'Clock Performance Index', 'Cache Processing Input', 'Central Processing Instruction'],
-    correctAnswerIndex: 0,
-    bloomLevel: 'Remember',
+    question: 'A program executes 1.2 billion instructions and takes 2.4 billion CPU cycles. What is the CPI?',
+    options: ['0.5', '2.0', '3.0', '4.0'],
+    correctAnswerIndex: 1,
+    bloomLevel: 'Apply',
     competencyCode: 'PA',
   },
   {
@@ -1583,10 +1645,15 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
   {
     id: 173,
     module: 'Performance Analysis',
-    question: 'What is execution time dependent on?',
-    options: ['Screen resolution', 'Number of instructions, CPI, and clock frequency', 'Keyboard input', 'Disk storage'],
+    question: 'You must choose between two optimizations: one reduces instruction count but increases CPI, and the other reduces CPI but increases instruction count. On the same CPU, which factors are the BEST basis for deciding which version runs faster?',
+    options: [
+      'Screen resolution',
+      'Number of instructions, CPI, and clock frequency',
+      'Keyboard input rate',
+      'Disk storage capacity',
+    ],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Evaluate',
     competencyCode: 'PA',
   },
   {
@@ -1613,16 +1680,21 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What is instruction mix?',
     options: ['Type of CPU', 'Distribution of instruction types in a program', 'Memory layout', 'Cache size'],
     correctAnswerIndex: 1,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Remember',
     competencyCode: 'PA',
   },
   {
     id: 177,
     module: 'Performance Analysis',
-    question: 'How is average CPI calculated?',
-    options: ['Sum of instruction counts only', 'Sum of (instruction count × CPI) divided by total instructions', 'Clock frequency divided by instructions', 'Execution time divided by cycles'],
-    correctAnswerIndex: 1,
-    bloomLevel: 'Analyze',
+    question: 'A program has an instruction mix dominated by load/store operations, leading to a high average CPI at a fixed clock frequency. You can implement only one optimization this sprint. Which change best reduces the average CPI without increasing clock frequency?',
+    options: [
+      'Improve data locality (e.g., blocking/SoA) to increase cache hits and lower effective load/store CPI',
+      'Add detailed logging to better understand performance',
+      'Increase use of indirect branches to simplify control flow',
+      'Move computations from registers to memory to reduce register pressure',
+    ],
+    correctAnswerIndex: 0,
+    bloomLevel: 'Evaluate',
     competencyCode: 'PA',
   },
   {
@@ -1631,7 +1703,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What happens when clock frequency increases?',
     options: ['Execution slows down', 'Instruction count increases', 'Clock cycles become longer', 'CPU can execute more operations per second'],
     correctAnswerIndex: 3,
-    bloomLevel: 'Understand',
+    bloomLevel: 'Apply',
     competencyCode: 'PA',
   },
   {
@@ -1640,7 +1712,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     question: 'What does execution time formula include?',
     options: ['Memory size only', 'Cache levels', 'Instructions, CPI, and clock frequency', 'Input/output devices'],
     correctAnswerIndex: 2,
-    bloomLevel: 'Analyze',
+    bloomLevel: 'Remember',
     competencyCode: 'PA',
   },
   {
@@ -1652,7 +1724,7 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = [
     bloomLevel: 'Analyze',
     competencyCode: 'PA',
   },
-]
+])
 
 const PRETEST_ITEMS_PER_MODULE = 5
 
