@@ -422,7 +422,7 @@ const CheatsheetReviewPage = () => {
                       <h3 className="mt-2 text-3xl font-black tracking-tight text-amber-950 font-['Segoe_Print','Bradley_Hand','Comic_Sans_MS',cursive]">
                         {notebookTitle}
                       </h3>
-                      <p className="mt-2 text-sm text-amber-900/90">Wrong answers first, then unseen topics, then correct-answer reinforcement.</p>
+                      <p className="mt-2 text-sm text-amber-900/90">Wrong answers first, then correct-answer reinforcement.</p>
                     </div>
                     <div className="max-w-55 -rotate-2 rounded-lg border border-amber-300 bg-yellow-200/80 px-3 py-2 text-[11px] font-semibold leading-snug text-amber-900 shadow-md font-['Segoe_Print','Bradley_Hand','Comic_Sans_MS',cursive]">
                       Tip: Use color coding while reviewing. One purpose per color helps recall faster.
@@ -432,7 +432,6 @@ const CheatsheetReviewPage = () => {
                   <div className="mt-4 space-y-3">
                     {([
                       ['wrong', 'wrong answers', 'border-red-200 bg-red-50/80', 'text-red-800'],
-                      ['unseen', 'unseen questions', 'border-yellow-300 bg-yellow-50/90', 'text-yellow-800'],
                       ['correct', 'correct answers', 'border-emerald-200 bg-emerald-50/85', 'text-emerald-800'],
                     ] as const).map(([categoryKey, label, sectionClass, titleClass]) => (
                       <div key={categoryKey} className={`rounded-xl border px-3.5 py-3.5 ${sectionClass}`}>
@@ -458,7 +457,7 @@ const CheatsheetReviewPage = () => {
                     <div className="mt-4 rounded-xl border border-amber-200 bg-white/80 px-3 py-2 text-[11px] text-amber-900/85">
                     <p className="font-bold uppercase tracking-[0.2em]">Color key</p>
                     <p className="mt-1">
-                      Wrong answers: light red | Unseen questions: yellow | Correct answers: green
+                      Wrong answers: light red | Correct answers: green
                     </p>
                   </div>
                 </div>
@@ -473,7 +472,6 @@ const CheatsheetReviewPage = () => {
                 <div className="mt-3 space-y-3 text-sm leading-6 font-medium text-slate-800 font-['Trebuchet_MS','Calibri',sans-serif]">
                   {([
                     ['wrong', 'wrong answers', 'border-red-200 bg-red-50/80', 'text-red-800'],
-                    ['unseen', 'unseen questions', 'border-yellow-300 bg-yellow-50/90', 'text-yellow-800'],
                     ['correct', 'correct answers', 'border-emerald-200 bg-emerald-50/85', 'text-emerald-800'],
                   ] as const).map(([categoryKey, label, sectionClass, titleClass]) => (
                     <div key={`${categoryKey}-pdf`} className={`space-y-1.5 rounded-xl border px-3 py-2 ${sectionClass}`}>

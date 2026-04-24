@@ -1,12 +1,19 @@
 import type { AssessmentProgressRecord } from '../../services/assessmentProgress'
 import type { ModuleProgressRecord } from '../../services/moduleProgress'
+import { MODULE_CONFIG } from './moduleConfig'
 
 export type LearningStageKey = 'prelim' | 'midterm' | 'final'
 
+const getStageModuleIds = (stage: LearningStageKey) => {
+  return MODULE_CONFIG.filter((moduleConfig) => moduleConfig.stage === stage)
+    .sort((first, second) => first.order - second.order)
+    .map((moduleConfig) => moduleConfig.id)
+}
+
 export const LEARNING_STAGE_MODULE_IDS: Record<LearningStageKey, number[]> = {
-  prelim: [1, 2, 3],
-  midterm: [4, 5, 6],
-  final: [7, 8, 9],
+  prelim: getStageModuleIds('prelim'),
+  midterm: getStageModuleIds('midterm'),
+  final: getStageModuleIds('final'),
 }
 
 export type LearningStageConfig = {
@@ -25,8 +32,8 @@ export const LEARNING_STAGE_CONFIGS: Record<LearningStageKey, LearningStageConfi
   prelim: {
     key: 'prelim',
     label: 'Prelim',
-    moduleStartId: 1,
-    moduleEndId: 3,
+    moduleStartId: LEARNING_STAGE_MODULE_IDS.prelim[0],
+    moduleEndId: LEARNING_STAGE_MODULE_IDS.prelim[LEARNING_STAGE_MODULE_IDS.prelim.length - 1],
     diagnosticAssessmentKey: 'prelim',
     legacyDiagnosticAssessmentKeys: ['diagnostic-pretest'],
     summativeAssessmentKey: 'prelim-summative-posttest',
@@ -34,8 +41,8 @@ export const LEARNING_STAGE_CONFIGS: Record<LearningStageKey, LearningStageConfi
   midterm: {
     key: 'midterm',
     label: 'Midterm',
-    moduleStartId: 4,
-    moduleEndId: 6,
+    moduleStartId: LEARNING_STAGE_MODULE_IDS.midterm[0],
+    moduleEndId: LEARNING_STAGE_MODULE_IDS.midterm[LEARNING_STAGE_MODULE_IDS.midterm.length - 1],
     diagnosticAssessmentKey: 'midterm',
     legacyDiagnosticAssessmentKeys: ['midterm-diagnostic-pretest'],
     summativeAssessmentKey: 'midterm-summative-posttest',
@@ -43,8 +50,8 @@ export const LEARNING_STAGE_CONFIGS: Record<LearningStageKey, LearningStageConfi
   final: {
     key: 'final',
     label: 'Final',
-    moduleStartId: 7,
-    moduleEndId: 9,
+    moduleStartId: LEARNING_STAGE_MODULE_IDS.final[0],
+    moduleEndId: LEARNING_STAGE_MODULE_IDS.final[LEARNING_STAGE_MODULE_IDS.final.length - 1],
     diagnosticAssessmentKey: 'final',
     legacyDiagnosticAssessmentKeys: ['final-diagnostic-pretest'],
     summativeAssessmentKey: 'final-summative-posttest',

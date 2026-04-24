@@ -20,8 +20,8 @@ import { useGradingStage } from '@/contexts/GradingStageContext'
 import { getLearningStageConfig, getStageDiagnosticRecord, hasReviewerForStage, resolveStageForSelection, type LearningStageKey } from '../data/learningStage'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
-import { generateResult, getUserAssessmentProgress, upsertAssessmentProgress } from '../../services/assessmentProgress'
-import { getDiagnosticQuestionPoolForStage, getDiagnosticQuestionsByIdsForStage, normalizeSelectedAnswersForStage } from '../data/diagnosticQuestions'
+import { getUserAssessmentProgress, upsertAssessmentProgress } from '../../services/assessmentProgress'
+import { computeModuleGapPerformance, getDiagnosticQuestionPoolForStage, getDiagnosticQuestionsByIdsForStage, normalizeSelectedAnswersForStage } from '../data/diagnosticQuestions'
 const GAP_ANALYSIS_PASSING_PERCENTAGE = 75
 
 const toPercentage = (correct: number, total: number) => {
@@ -62,22 +62,16 @@ type ConceptNodeData = {
   color: string
 }
 
-const CONCEPT_LABELS: Record<string, string> = {
-  MH: 'Memory Hierarchy',
-  CPU: 'CPU Components',
-  PIPE: 'Pipeline Architecture',
-  CM: 'Cache Memory',
-  VM: 'Virtual Memory',
-  ILP: 'Advanced Execution',
-}
-
 const RECOMMENDED_TOPIC_NOTES: Record<string, string> = {
-  MH: 'Focus on cache locality, hit/miss behavior, and why hierarchy balances speed and cost.',
-  CPU: 'Review how ALU, Control Unit, and registers coordinate in instruction execution.',
-  PIPE: 'Practice identifying hazards and predicting throughput effects in staged execution.',
-  CM: 'Review hit/miss flow, mapping methods, and trade-offs of associative cache designs.',
-  VM: 'Focus on paging, address translation, and how virtual memory supports protection and multitasking.',
-  ILP: 'Practice hazards, out-of-order execution, and why ILP gains trade off with complexity and power.',
+  'CPU Components': 'Review how the ALU, Control Unit, and registers coordinate instruction execution and control signals.',
+  'Architecture Fundamentals': 'Focus on Von Neumann vs. Harvard trade-offs, bottlenecks, and why parallel instruction/data access matters.',
+  'Memory Hierarchy': 'Focus on locality, hit/miss behavior, and why the hierarchy balances speed, cost, and capacity.',
+  'Cache Organization': 'Review cache hits/misses, mapping methods, associativity trade-offs, and data-oriented access patterns.',
+  'Virtual Memory and ECC': 'Focus on paging, address translation, protection/isolation, and performance trade-offs like TLB behavior.',
+  'Instruction Set Architecture': 'Review RISC vs. CISC trade-offs, instruction formats, and pipeline-friendly decoding considerations.',
+  'Pipelining and Hazards': 'Practice identifying hazards, understanding stalls, and reasoning about throughput and structural limits.',
+  'Advanced Execution': 'Review ILP limits, out-of-order execution, renaming, and why deeper pipelines trade off with penalties.',
+  'Performance Analysis': 'Practice execution-time reasoning using instruction count, CPI, and clock frequency; apply Amdahl’s Law.',
 }
 
 type GapTabKey = 'overview' | 'concept-graph' | 'recommendations' | 'study-plan'
@@ -158,9 +152,16 @@ const GapAnalysisPage = () => {
   }, [uid, selectedStage])
 
   const activeQuestions = useMemo(() => {
-    const stagePool = getDiagnosticQuestionPoolForStage(activeStage)
-    return questionIds.length > 0 ? getDiagnosticQuestionsByIdsForStage(questionIds, activeStage) : stagePool
+    if (questionIds.length <= 0) {
+      return getDiagnosticQuestionPoolForStage(activeStage)
+    }
+
+    return getDiagnosticQuestionsByIdsForStage(questionIds, activeStage)
   }, [questionIds, activeStage])
+
+  const moduleResults = useMemo(() => {
+    return computeModuleGapPerformance(activeQuestions, selectedAnswers, activeStage)
+  }, [activeQuestions, selectedAnswers, activeStage])
 
   const radarData = useMemo(() => {
     const palette = [
@@ -170,72 +171,32 @@ const GapAnalysisPage = () => {
       { color: 'bg-amber-500', stroke: '#f59e0b' },
     ]
 
-    const competencyScores = new Map<string, { correct: number; total: number }>()
-
-    for (const question of activeQuestions) {
-      const answerIndex = selectedAnswers[question.id]
-      const isCorrect = answerIndex !== undefined && answerIndex === question.correctAnswerIndex
-      const current = competencyScores.get(question.competencyCode) ?? { correct: 0, total: 0 }
-
-      current.total += 1
-      current.correct += isCorrect ? 1 : 0
-      competencyScores.set(question.competencyCode, current)
-    }
-
-    return Array.from(competencyScores.entries()).map(([label, result], index) => {
+    return moduleResults.map((entry, index) => {
       const style = palette[index % palette.length]
       return {
-        label,
-        percent: result.total > 0 ? toPercentage(result.correct, result.total) : 0,
+        label: entry.module,
+        percent: Number(entry.modulePerformance.toFixed(2)),
         color: style.color,
         stroke: style.stroke,
+        moduleGapScore: entry.moduleGapScore,
+        moduleTotalWeight: entry.moduleTotalWeight,
+        totalQuestions: entry.totalQuestions,
+        wrongQuestions: entry.wrongQuestions,
       }
     })
-  }, [activeQuestions, selectedAnswers])
+  }, [moduleResults])
 
-  const competencyStats = useMemo(() => {
-    const stats: Record<string, { correct: number; total: number; mistakes: number }> = {}
-
-    for (const question of activeQuestions) {
-      const competency = question.competencyCode
-
-      if (!stats[competency]) {
-        stats[competency] = { correct: 0, total: 0, mistakes: 0 }
-      }
-
-      const isCorrect = selectedAnswers[question.id] === question.correctAnswerIndex
-      stats[competency].total += 1
-      stats[competency].correct += isCorrect ? 1 : 0
-      stats[competency].mistakes += isCorrect ? 0 : 1
-    }
-
-    return stats
-  }, [activeQuestions, selectedAnswers])
+  const moduleResultByModule = useMemo(() => {
+    return new Map(moduleResults.map((entry) => [entry.module, entry]))
+  }, [moduleResults])
 
   const computedPercentage = useMemo(() => {
     return toPercentage(score, totalItems)
   }, [score, totalItems])
 
-  const correct = score
-  const total = totalItems
-
-  const responses = useMemo(() => {
-    return activeQuestions.map((question) => ({
-      question_id: question.id,
-      correctness: selectedAnswers[question.id] === question.correctAnswerIndex ? 1 : 0,
-    }))
-  }, [activeQuestions, selectedAnswers])
-
-  const mapping = useMemo(() => {
-    return activeQuestions.map((question) => ({
-      question_id: question.id,
-      competency_id: question.competencyCode,
-    }))
-  }, [activeQuestions])
-
-  const result = useMemo(() => {
-    return generateResult(correct, total, responses, mapping)
-  }, [correct, total, responses, mapping])
+  const knowledgeGaps = useMemo(() => {
+    return moduleResults.filter((entry) => entry.modulePerformance < GAP_ANALYSIS_PASSING_PERCENTAGE).length
+  }, [moduleResults])
 
   const chartPeak = useMemo(() => {
     return Math.max(100, ...radarData.map((entry) => entry.percent))
@@ -392,10 +353,6 @@ const GapAnalysisPage = () => {
     )
   }
 
-  if (!result) {
-    return null
-  }
-
   return (
     <main className={`flex-1 overflow-y-auto selection:bg-indigo-500/30 rounded-4xl border ${pageSurface} ${isBrightMode ? 'border-amber-100/80' : 'border-slate-700/60'}`}>
       <div className="max-w-350 mx-auto px-4 sm:px-8 lg:px-12 py-8 pb-32">
@@ -451,21 +408,21 @@ const GapAnalysisPage = () => {
                     value={isQualified ? 'Qualified' : 'Not Qualified'}
                     color={isQualified ? 'text-emerald-600' : 'text-rose-500'}
                   />
-                  <Badge label="Knowledge Gaps" value={`${result.knowledge_gaps}`} color={highlightText} />
+                  <Badge label="Knowledge Gaps" value={`${knowledgeGaps}`} color={highlightText} />
                 </div>
               </div>
 
               <div className={`flex flex-col sm:flex-row items-center gap-8 p-8 rounded-[2.5rem] border shrink-0 ${softSurface}`}>
                 <div className="flex flex-col items-center gap-2">
                   <div className={`h-28 w-28 rounded-full shadow-xl flex flex-col items-center justify-center text-white border-4 ${isBrightMode ? 'bg-linear-to-br from-blue-600 to-indigo-600 border-white/90 shadow-blue-500/20' : 'bg-indigo-600 border-indigo-100 dark:border-indigo-900/50'}`}>
-                    <span className="text-3xl font-black">{result.percentage.toFixed(0) + '%'}</span>
+                    <span className="text-3xl font-black">{computedPercentage.toFixed(0) + '%'}</span>
                   </div>
                   <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Score</p>
                 </div>
                 <div className={`hidden sm:block h-20 w-px ${isBrightMode ? 'bg-amber-100' : 'bg-slate-700'}`}></div>
                 <div className="text-center sm:text-left">
                   <h3 className={`text-3xl font-black tracking-tighter ${highlightText}`}>
-                    {result.score + '/' + total}
+                    {score + '/' + totalItems}
                   </h3>
                   <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>Correct</p>
                 </div>
@@ -561,7 +518,7 @@ const GapAnalysisPage = () => {
                       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-700 bg-slate-900 text-slate-200'}`}
                     >
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.stroke }} />
-                      {entry.label} - {CONCEPT_LABELS[entry.label] ?? entry.label}
+                      {entry.label}
                     </span>
                   ))}
                 </div>
@@ -649,7 +606,7 @@ const GapAnalysisPage = () => {
                   {[...radarData]
                     .sort((a, b) => a.percent - b.percent)
                     .map((entry, index) => {
-                      const stats = competencyStats[entry.label as keyof typeof competencyStats] ?? { correct: 0, total: 0, mistakes: 0 }
+                      const stats = moduleResultByModule.get(entry.label) ?? { wrongQuestions: 0, totalQuestions: 0 }
                       const feedback = getRecommendationFeedback(entry.percent)
 
                       return (
@@ -659,16 +616,16 @@ const GapAnalysisPage = () => {
                         >
                           <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${mutedText}`}>Priority #{index + 1}</p>
                           <h3 className={`mt-2 text-lg font-black ${highlightText}`}>
-                            {entry.label} - {CONCEPT_LABELS[entry.label] ?? entry.label}
+                            {entry.label}
                           </h3>
-                          <p className={`mt-2 text-sm ${mutedText}`}>{RECOMMENDED_TOPIC_NOTES[entry.label] ?? 'Review this competency in depth.'}</p>
+                          <p className={`mt-2 text-sm ${mutedText}`}>{RECOMMENDED_TOPIC_NOTES[entry.label] ?? 'Review this module in depth.'}</p>
                           <p
                             className={`mt-3 text-xs font-black uppercase tracking-widest ${entry.percent >= 90 ? 'text-cyan-500' : entry.percent >= 75 ? 'text-emerald-500' : entry.percent >= 50 ? 'text-amber-500' : 'text-rose-500'}`}
                           >
                             Current mastery: {formatPercentage(entry.percent)}%
                           </p>
                           <p className={`mt-2 text-xs font-semibold ${mutedText}`}>
-                            Mistakes: {stats.mistakes} of {stats.total} questions
+                            Mistakes: {stats.wrongQuestions} of {stats.totalQuestions} questions
                           </p>
                           <p className={`mt-2 text-xs leading-relaxed ${mutedText}`}>{feedback}</p>
                         </article>

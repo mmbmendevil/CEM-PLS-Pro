@@ -11,20 +11,36 @@ export type DiagnosticQuestion = {
 
 export type DiagnosticQuestionStage = 'prelim' | 'midterm' | 'final'
 
-const BLOOM_LEVEL_WEIGHTS: Record<DiagnosticQuestion['bloomLevel'], number> = {
+import { MODULE_CONFIG, getModuleConfigByTitle, getStageFromModule } from './moduleConfig'
+
+const BLOOM_POINTS: Record<DiagnosticQuestion['bloomLevel'], number> = {
   Remember: 1,
   Understand: 1,
-  Apply: 2,
-  Analyze: 3,
-  Evaluate: 4,
-  Create: 4,
+  Apply: 1.5,
+  Analyze: 1.5,
+  Evaluate: 2,
+  Create: 2,
 }
 
 const addWeights = (questions: Omit<DiagnosticQuestion, 'weight'>[]): DiagnosticQuestion[] => {
   return questions.map((question) => ({
     ...question,
-    weight: BLOOM_LEVEL_WEIGHTS[question.bloomLevel],
+    weight: BLOOM_POINTS[question.bloomLevel],
+    competencyCode: getModuleConfigByTitle(question.module)?.competencyCode ?? question.competencyCode,
   }))
+}
+
+export function computeScore(
+  questions: Array<Pick<DiagnosticQuestion, 'weight' | 'correctAnswerIndex'>>,
+  answers: number[],
+) {
+  const totalPossible = questions.reduce((sum, q) => sum + q.weight, 0)
+
+  const totalEarned = questions.reduce((sum, q, i) => {
+    return sum + (answers[i] === q.correctAnswerIndex ? q.weight : 0)
+  }, 0)
+
+  return (totalEarned / totalPossible) * 100
 }
 
 const DIAGNOSTIC_PRETEST_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
@@ -1785,6 +1801,61 @@ const FINAL_DIAGNOSTIC_QUESTION_BANK: DiagnosticQuestion[] = addWeights([
 ])
 
 const PRETEST_ITEMS_PER_MODULE = 5
+export const PRETEST_POINTS_LIMIT = 15
+export const POSTTEST_POINTS_LIMIT = 30
+
+const takeQuestionsByPoints = (questions: DiagnosticQuestion[], pointsLimit: number) => {
+  const selected: DiagnosticQuestion[] = []
+
+  const toHalfPoints = (value: number) => Math.round(value * 2)
+  const pointsLimitHalf = toHalfPoints(pointsLimit)
+  let earnedHalf = 0
+
+  for (const question of questions) {
+    const questionHalf = toHalfPoints(question.weight)
+
+    if (earnedHalf + questionHalf > pointsLimitHalf) {
+      continue
+    }
+
+    selected.push(question)
+    earnedHalf += questionHalf
+
+    if (earnedHalf >= pointsLimitHalf) {
+      break
+    }
+  }
+
+  if (earnedHalf < pointsLimitHalf) {
+    const selectedIds = new Set(selected.map((question) => question.id))
+    const remaining = questions.filter((question) => !selectedIds.has(question.id)).sort((first, second) => {
+      const firstHalf = toHalfPoints(first.weight)
+      const secondHalf = toHalfPoints(second.weight)
+
+      if (firstHalf !== secondHalf) {
+        return firstHalf - secondHalf
+      }
+      return first.id - second.id
+    })
+
+    for (const question of remaining) {
+      const questionHalf = toHalfPoints(question.weight)
+
+      if (earnedHalf + questionHalf > pointsLimitHalf) {
+        continue
+      }
+
+      selected.push(question)
+      earnedHalf += questionHalf
+
+      if (earnedHalf >= pointsLimitHalf) {
+        break
+      }
+    }
+  }
+
+  return selected
+}
 
 const buildPretestQuestions = (questionBank: DiagnosticQuestion[]) => {
   const questionBuckets = new Map<string, DiagnosticQuestion[]>()
@@ -1799,23 +1870,26 @@ const buildPretestQuestions = (questionBank: DiagnosticQuestion[]) => {
     moduleQuestions.slice(0, PRETEST_ITEMS_PER_MODULE),
   )
 
-  return selectedQuestions.sort((first, second) => first.id - second.id)
+  return takeQuestionsByPoints(selectedQuestions.sort((first, second) => first.id - second.id), PRETEST_POINTS_LIMIT)
 }
 
-export const DIAGNOSTIC_PRETEST_QUESTIONS: DiagnosticQuestion[] = buildPretestQuestions(DIAGNOSTIC_PRETEST_QUESTION_BANK)
-export const DIAGNOSTIC_PRETEST_QUESTION_POOL: DiagnosticQuestion[] = DIAGNOSTIC_PRETEST_QUESTION_BANK
-export const MIDTERM_DIAGNOSTIC_QUESTION_POOL: DiagnosticQuestion[] = MIDTERM_DIAGNOSTIC_QUESTION_BANK
-export const FINAL_DIAGNOSTIC_QUESTION_POOL: DiagnosticQuestion[] = FINAL_DIAGNOSTIC_QUESTION_BANK
+const ALL_DIAGNOSTIC_QUESTIONS: DiagnosticQuestion[] = [
+  ...DIAGNOSTIC_PRETEST_QUESTION_BANK,
+  ...MIDTERM_DIAGNOSTIC_QUESTION_BANK,
+  ...FINAL_DIAGNOSTIC_QUESTION_BANK,
+]
 
-const DIAGNOSTIC_STAGE_QUESTION_POOLS: Record<DiagnosticQuestionStage, DiagnosticQuestion[]> = {
-  prelim: DIAGNOSTIC_PRETEST_QUESTION_POOL,
-  midterm: MIDTERM_DIAGNOSTIC_QUESTION_POOL,
-  final: FINAL_DIAGNOSTIC_QUESTION_POOL,
-}
+export const getAllDiagnosticQuestions = () => ALL_DIAGNOSTIC_QUESTIONS
 
 export const getDiagnosticQuestionPoolForStage = (stage: DiagnosticQuestionStage) => {
-  return DIAGNOSTIC_STAGE_QUESTION_POOLS[stage] ?? DIAGNOSTIC_PRETEST_QUESTION_POOL
+  const stageQuestions = ALL_DIAGNOSTIC_QUESTIONS.filter((question) => getStageFromModule(question.module) === stage)
+  return stageQuestions.length > 0 ? stageQuestions : DIAGNOSTIC_PRETEST_QUESTION_BANK
 }
+
+export const DIAGNOSTIC_PRETEST_QUESTION_POOL: DiagnosticQuestion[] = getDiagnosticQuestionPoolForStage('prelim')
+export const MIDTERM_DIAGNOSTIC_QUESTION_POOL: DiagnosticQuestion[] = getDiagnosticQuestionPoolForStage('midterm')
+export const FINAL_DIAGNOSTIC_QUESTION_POOL: DiagnosticQuestion[] = getDiagnosticQuestionPoolForStage('final')
+export const DIAGNOSTIC_PRETEST_QUESTIONS: DiagnosticQuestion[] = buildPretestQuestions(DIAGNOSTIC_PRETEST_QUESTION_POOL)
 
 const normalizeLegacyQuestionIdForStage = (
   questionId: number,
@@ -1874,11 +1948,11 @@ export const getRandomDiagnosticPretestQuestions = (
     shuffleQuestions(moduleQuestions).slice(0, itemsPerModule),
   )
 
-  return shuffleQuestions(selectedQuestions)
+  return takeQuestionsByPoints(shuffleQuestions(selectedQuestions), PRETEST_POINTS_LIMIT)
 }
 
 export const getDiagnosticQuestionsByIds = (questionIds: number[]) => {
-  const questionById = new Map(DIAGNOSTIC_PRETEST_QUESTION_POOL.map((question) => [question.id, question]))
+  const questionById = new Map(getAllDiagnosticQuestions().map((question) => [question.id, question]))
 
   return questionIds
     .map((questionId) => questionById.get(questionId))
@@ -1910,6 +1984,86 @@ const groupQuestionsByModule = (questions: DiagnosticQuestion[]) => {
   return questionBuckets
 }
 
+export const computeModuleGapPerformance = (
+  questions: DiagnosticQuestion[],
+  selectedAnswers: Record<number, number>,
+  stage?: DiagnosticQuestionStage,
+) => {
+  const moduleAgg = new Map<
+    string,
+    {
+      module: string
+      competencyCode: string
+      moduleGapScore: number
+      moduleTotalWeight: number
+      totalQuestions: number
+      wrongQuestions: number
+    }
+  >()
+
+  const includedModules = stage
+    ? MODULE_CONFIG.filter((moduleConfig) => moduleConfig.stage === stage)
+    : MODULE_CONFIG
+
+  for (const moduleConfig of includedModules) {
+    moduleAgg.set(moduleConfig.competencyCode, {
+      module: moduleConfig.title,
+      competencyCode: moduleConfig.competencyCode,
+      moduleGapScore: 0,
+      moduleTotalWeight: 0,
+      totalQuestions: 0,
+      wrongQuestions: 0,
+    })
+  }
+
+  for (const question of questions) {
+    const moduleConfig = getModuleConfigByTitle(question.module)
+    const competencyCode = moduleConfig?.competencyCode ?? question.competencyCode
+    const isCorrect = selectedAnswers[question.id] === question.correctAnswerIndex
+    const gap = question.weight * (isCorrect ? 0 : 1)
+
+    const current = moduleAgg.get(competencyCode) ?? {
+      module: question.module,
+      competencyCode,
+      moduleGapScore: 0,
+      moduleTotalWeight: 0,
+      totalQuestions: 0,
+      wrongQuestions: 0,
+    }
+
+    current.moduleGapScore += gap
+    current.moduleTotalWeight += question.weight
+    current.totalQuestions += 1
+    current.wrongQuestions += isCorrect ? 0 : 1
+    moduleAgg.set(competencyCode, current)
+  }
+
+  const orderIndex = (competencyCode: string) => {
+    const moduleConfig = includedModules.find((entry) => entry.competencyCode === competencyCode)
+    return moduleConfig?.order ?? Number.MAX_SAFE_INTEGER
+  }
+
+  return Array.from(moduleAgg.entries())
+    .map((entry) => {
+      const moduleEntry = entry[1]
+      const modulePerformance =
+        moduleEntry.moduleTotalWeight <= 0
+          ? 0
+          : ((moduleEntry.moduleTotalWeight - moduleEntry.moduleGapScore) / moduleEntry.moduleTotalWeight) * 100
+
+      return {
+        module: moduleEntry.module,
+        competencyCode: moduleEntry.competencyCode,
+        moduleGapScore: moduleEntry.moduleGapScore,
+        moduleTotalWeight: moduleEntry.moduleTotalWeight,
+        modulePerformance,
+        totalQuestions: moduleEntry.totalQuestions,
+        wrongQuestions: moduleEntry.wrongQuestions,
+      }
+    })
+    .sort((first, second) => orderIndex(first.competencyCode) - orderIndex(second.competencyCode))
+}
+
 const weightedSortForModule = (
   questions: DiagnosticQuestion[],
   selectedAnswers: Record<number, number>,
@@ -1923,11 +2077,14 @@ const weightedSortForModule = (
       return firstIsUnseen ? -1 : 1
     }
 
-    const firstIsWrong = pretestQuestionSet.has(first.id) && selectedAnswers[first.id] !== first.correctAnswerIndex
-    const secondIsWrong = pretestQuestionSet.has(second.id) && selectedAnswers[second.id] !== second.correctAnswerIndex
+    const firstIsCorrect = selectedAnswers[first.id] === first.correctAnswerIndex
+    const secondIsCorrect = selectedAnswers[second.id] === second.correctAnswerIndex
 
-    if (firstIsWrong !== secondIsWrong) {
-      return firstIsWrong ? -1 : 1
+    const firstGap = first.weight * (firstIsCorrect ? 0 : 1)
+    const secondGap = second.weight * (secondIsCorrect ? 0 : 1)
+
+    if (firstGap !== secondGap) {
+      return secondGap - firstGap
     }
 
     return Math.random() - 0.5
@@ -1954,5 +2111,255 @@ export const getWeightedSummativeQuestions = ({
     return weightedSortForModule(moduleQuestions, normalizedSelectedAnswers, pretestQuestionSet).slice(0, itemsPerModule)
   })
 
-  return shuffleQuestions(weightedQuestions)
+  return takeQuestionsByPoints(shuffleQuestions(weightedQuestions), POSTTEST_POINTS_LIMIT)
+}
+
+export const getCATPretestInitialQuestions = (stage: DiagnosticQuestionStage = 'prelim') => {
+  const stagePool = getDiagnosticQuestionPoolForStage(stage)
+  const stageModules = MODULE_CONFIG
+    .filter((moduleConfig) => moduleConfig.stage === stage)
+    .sort((first, second) => (first.order ?? 0) - (second.order ?? 0))
+
+  for (const moduleConfig of stageModules) {
+    const moduleQuestions = stagePool.filter((question) => question.module === moduleConfig.title)
+    const preferred =
+      moduleQuestions.find((question) => question.weight === 1.5) ??
+      moduleQuestions.find((question) => question.weight === 1) ??
+      moduleQuestions[0]
+
+    if (preferred) {
+      return [preferred]
+    }
+  }
+
+  return stagePool.length > 0 ? [stagePool[0]] : []
+}
+
+export const getCATPretestNextQuestion = ({
+  stage = 'prelim',
+  questionIds,
+  selectedAnswers,
+  maxTotalPoints = PRETEST_POINTS_LIMIT,
+}: {
+  stage?: DiagnosticQuestionStage
+  questionIds: number[]
+  selectedAnswers: Record<number, number>
+  maxTotalPoints?: number
+}) => {
+  const stagePool = getDiagnosticQuestionPoolForStage(stage)
+  const askedSet = new Set(questionIds)
+  const askedQuestions = stagePool.filter((question) => askedSet.has(question.id))
+
+  const currentTotal = askedQuestions.reduce((sum, question) => sum + question.weight, 0)
+  const remainingPoints = maxTotalPoints - currentTotal
+
+  if (remainingPoints <= 0) {
+    return null
+  }
+
+  const currentEarned = askedQuestions.reduce((sum, question) => {
+    return sum + (selectedAnswers[question.id] === question.correctAnswerIndex ? question.weight : 0)
+  }, 0)
+  const performance = currentTotal > 0 ? currentEarned / currentTotal : 0.5
+
+  const targetWeight = performance >= 0.75 ? 2 : performance >= 0.5 ? 1.5 : 1
+
+  const askedByModule = new Map<string, number>()
+  for (const question of askedQuestions) {
+    askedByModule.set(question.module, (askedByModule.get(question.module) ?? 0) + 1)
+  }
+
+  const stageModules = MODULE_CONFIG
+    .filter((moduleConfig) => moduleConfig.stage === stage)
+    .sort((first, second) => (first.order ?? 0) - (second.order ?? 0))
+
+  const modulePriority = stageModules
+    .map((moduleConfig) => ({
+      title: moduleConfig.title,
+      asked: askedByModule.get(moduleConfig.title) ?? 0,
+      order: moduleConfig.order ?? Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((first, second) => (first.asked !== second.asked ? first.asked - second.asked : first.order - second.order))
+
+  const remainingQuestions = stagePool.filter((question) => !askedSet.has(question.id) && question.weight <= remainingPoints)
+
+  for (const moduleCandidate of modulePriority) {
+    const moduleQuestions = remainingQuestions.filter((question) => question.module === moduleCandidate.title)
+
+    if (moduleQuestions.length === 0) {
+      continue
+    }
+
+    const best = [...moduleQuestions].sort((first, second) => {
+      const firstDiff = Math.abs(first.weight - targetWeight)
+      const secondDiff = Math.abs(second.weight - targetWeight)
+
+      if (firstDiff !== secondDiff) {
+        return firstDiff - secondDiff
+      }
+
+      if (first.weight !== second.weight) {
+        return second.weight - first.weight
+      }
+
+      return first.id - second.id
+    })[0]
+
+    return best ?? null
+  }
+
+  return remainingQuestions.length > 0 ? remainingQuestions[0] : null
+}
+
+export const getCATPosttestInitialQuestions = ({
+  stage = 'prelim',
+  pretestQuestionIds,
+  pretestSelectedAnswers,
+}: {
+  stage?: DiagnosticQuestionStage
+  pretestQuestionIds: number[]
+  pretestSelectedAnswers: Record<number, number>
+}) => {
+  const stagePool = getDiagnosticQuestionPoolForStage(stage)
+  const pretestQuestionSet = new Set(pretestQuestionIds)
+
+  const baseQuestions = stagePool.filter((question) => !pretestQuestionSet.has(question.id))
+  const candidateQuestions = baseQuestions.length > 0 ? baseQuestions : stagePool
+
+  const wrongPretestSet = new Set(
+    getDiagnosticQuestionsByIdsForStage(pretestQuestionIds, stage)
+      .filter((question) => pretestSelectedAnswers[question.id] !== question.correctAnswerIndex)
+      .map((question) => question.module),
+  )
+
+  const stageModules = MODULE_CONFIG
+    .filter((moduleConfig) => moduleConfig.stage === stage)
+    .sort((first, second) => (first.order ?? 0) - (second.order ?? 0))
+
+  for (const moduleConfig of stageModules) {
+    const moduleQuestions = candidateQuestions.filter((question) => question.module === moduleConfig.title)
+    if (moduleQuestions.length === 0) {
+      continue
+    }
+
+    const shouldPrioritizeHarder = wrongPretestSet.has(moduleConfig.title)
+    const preferred =
+      (shouldPrioritizeHarder
+        ? moduleQuestions.find((question) => question.weight === 2) ?? moduleQuestions.find((question) => question.weight === 1.5)
+        : moduleQuestions.find((question) => question.weight === 1.5) ?? moduleQuestions.find((question) => question.weight === 1)) ??
+      moduleQuestions[0]
+
+    if (preferred) {
+      return [preferred]
+    }
+  }
+
+  return candidateQuestions.length > 0 ? [candidateQuestions[0]] : []
+}
+
+export const getCATPosttestNextQuestion = ({
+  stage = 'prelim',
+  pretestQuestionIds,
+  pretestSelectedAnswers,
+  posttestQuestionIds,
+  posttestSelectedAnswers,
+  maxTotalPoints = POSTTEST_POINTS_LIMIT,
+}: {
+  stage?: DiagnosticQuestionStage
+  pretestQuestionIds: number[]
+  pretestSelectedAnswers: Record<number, number>
+  posttestQuestionIds: number[]
+  posttestSelectedAnswers: Record<number, number>
+  maxTotalPoints?: number
+}) => {
+  const stagePool = getDiagnosticQuestionPoolForStage(stage)
+  const askedSet = new Set(posttestQuestionIds)
+  const pretestSet = new Set(pretestQuestionIds)
+  const askedQuestions = stagePool.filter((question) => askedSet.has(question.id))
+
+  const currentTotal = askedQuestions.reduce((sum, question) => sum + question.weight, 0)
+  const remainingPoints = maxTotalPoints - currentTotal
+
+  if (remainingPoints <= 0) {
+    return null
+  }
+
+  const currentEarned = askedQuestions.reduce((sum, question) => {
+    return sum + (posttestSelectedAnswers[question.id] === question.correctAnswerIndex ? question.weight : 0)
+  }, 0)
+  const performance = currentTotal > 0 ? currentEarned / currentTotal : 0.5
+
+  const targetWeight = performance >= 0.75 ? 2 : performance >= 0.5 ? 1.5 : 1
+
+  const askedByModule = new Map<string, number>()
+  for (const question of askedQuestions) {
+    askedByModule.set(question.module, (askedByModule.get(question.module) ?? 0) + 1)
+  }
+
+  const pretestQuestions = getDiagnosticQuestionsByIdsForStage(pretestQuestionIds, stage)
+  const pretestGapByModule = new Map<string, number>()
+
+  for (const question of pretestQuestions) {
+    const isCorrect = pretestSelectedAnswers[question.id] === question.correctAnswerIndex
+    const gap = question.weight * (isCorrect ? 0 : 1)
+    pretestGapByModule.set(question.module, (pretestGapByModule.get(question.module) ?? 0) + gap)
+  }
+
+  const stageModules = MODULE_CONFIG
+    .filter((moduleConfig) => moduleConfig.stage === stage)
+    .sort((first, second) => (first.order ?? 0) - (second.order ?? 0))
+
+  const modulePriority = stageModules
+    .map((moduleConfig) => ({
+      title: moduleConfig.title,
+      gap: pretestGapByModule.get(moduleConfig.title) ?? 0,
+      asked: askedByModule.get(moduleConfig.title) ?? 0,
+      order: moduleConfig.order ?? Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((first, second) => {
+      if (first.gap !== second.gap) {
+        return second.gap - first.gap
+      }
+
+      if (first.asked !== second.asked) {
+        return first.asked - second.asked
+      }
+
+      return first.order - second.order
+    })
+
+  const primaryRemainingQuestions = stagePool.filter((question) =>
+    !askedSet.has(question.id) &&
+    !pretestSet.has(question.id) &&
+    question.weight <= remainingPoints
+  )
+  const remainingQuestions = primaryRemainingQuestions.length > 0
+    ? primaryRemainingQuestions
+    : stagePool.filter((question) => !askedSet.has(question.id) && question.weight <= remainingPoints)
+
+  for (const moduleCandidate of modulePriority) {
+    const moduleQuestions = remainingQuestions.filter((question) => question.module === moduleCandidate.title)
+    if (moduleQuestions.length === 0) {
+      continue
+    }
+
+    const best = [...moduleQuestions].sort((first, second) => {
+      const firstDiff = Math.abs(first.weight - targetWeight)
+      const secondDiff = Math.abs(second.weight - targetWeight)
+
+      if (firstDiff !== secondDiff) {
+        return firstDiff - secondDiff
+      }
+
+      if (first.weight !== second.weight) {
+        return second.weight - first.weight
+      }
+
+      return first.id - second.id
+    })[0]
+
+    return best ?? null
+  }
+
+  return remainingQuestions.length > 0 ? remainingQuestions[0] : null
 }

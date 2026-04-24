@@ -5,13 +5,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBrightness } from '../../contexts/BrightnessContext'
 import { useGradingStage } from '@/contexts/GradingStageContext'
 import { getLearningStageConfig, getStageDiagnosticRecord, getStageSummativeRecord, resolveStageForSelection, type LearningStageKey } from '../data/learningStage'
-import { getDiagnosticQuestionsByIdsForStage, getWeightedSummativeQuestions } from '../data/diagnosticQuestions'
+import { POSTTEST_POINTS_LIMIT, getCATPosttestInitialQuestions, getCATPosttestNextQuestion, getDiagnosticQuestionsByIdsForStage } from '../data/diagnosticQuestions'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
 import { getUserAssessmentProgress, upsertAssessmentProgress, type SummativeAttemptDetail } from '../../services/assessmentProgress'
 
 const SUMMATIVE_PASSING_PERCENTAGE = 75
-const SUMMATIVE_ITEMS_PER_MODULE = 10
 const SUMMATIVE_MAX_FAILED_ATTEMPTS = 3
 
 const toPercentage = (correct: number, total: number) => {
@@ -21,6 +20,8 @@ const toPercentage = (correct: number, total: number) => {
 
   return Number(((correct / total) * 100).toFixed(2))
 }
+
+const formatPoints = (points: number) => String(Math.round(points * 2) / 2).replace(/\.0$/, '')
 
 const SummativePosttestPage = () => {
   const { isBrightMode } = useBrightness()
@@ -33,7 +34,9 @@ const SummativePosttestPage = () => {
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [activeStage, setActiveStage] = useState<LearningStageKey>('prelim')
   const [assessmentKey, setAssessmentKey] = useState(getLearningStageConfig('prelim').summativeAssessmentKey)
-  const [questions, setQuestions] = useState(() => getWeightedSummativeQuestions({ questionIds: [], selectedAnswers: {} }))
+  const [pretestQuestionIds, setPretestQuestionIds] = useState<number[]>([])
+  const [pretestSelectedAnswers, setPretestSelectedAnswers] = useState<Record<number, number>>({})
+  const [questions, setQuestions] = useState(() => getCATPosttestInitialQuestions({ pretestQuestionIds: [], pretestSelectedAnswers: {} }))
   const [hasStarted, setHasStarted] = useState(false)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
@@ -52,13 +55,42 @@ const SummativePosttestPage = () => {
   const allAnswered = questions.length > 0 && answeredCount === questions.length
   const attemptsRemaining = Math.max(SUMMATIVE_MAX_FAILED_ATTEMPTS - failedAttempts, 0)
 
+  const nextAdaptiveQuestion = !isSubmitted && currentQuestionIndex === questions.length - 1
+    ? getCATPosttestNextQuestion({
+      stage: activeStage,
+      pretestQuestionIds,
+      pretestSelectedAnswers,
+      posttestQuestionIds: questions.map((question) => question.id),
+      posttestSelectedAnswers: selectedAnswers,
+      maxTotalPoints: POSTTEST_POINTS_LIMIT,
+    })
+    : null
+
+  const handleAdvance = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((index) => Math.min(questions.length - 1, index + 1))
+      return
+    }
+
+    if (!nextAdaptiveQuestion) {
+      return
+    }
+
+    setQuestions((current) => [...current, nextAdaptiveQuestion])
+    setCurrentQuestionIndex((index) => index + 1)
+  }
+
   const score = useMemo(() => {
     return questions.reduce((total, question) => {
-      return selectedAnswers[question.id] === question.correctAnswerIndex ? total + 1 : total
+      return selectedAnswers[question.id] === question.correctAnswerIndex ? total + question.weight : total
     }, 0)
   }, [questions, selectedAnswers])
 
-  const scorePercentage = toPercentage(score, questions.length)
+  const totalPossible = useMemo(() => {
+    return questions.reduce((total, question) => total + question.weight, 0)
+  }, [questions])
+
+  const scorePercentage = toPercentage(score, totalPossible)
   const passed = scorePercentage >= SUMMATIVE_PASSING_PERCENTAGE
 
   useEffect(() => {
@@ -179,11 +211,13 @@ const SummativePosttestPage = () => {
           ? persistedSelectedAnswers
           : baseSelectedAnswers
 
-      const generatedQuestions = getWeightedSummativeQuestions({
-        questionIds: baseForGenerationQuestionIds,
-        selectedAnswers: baseForGenerationSelectedAnswers,
-        itemsPerModule: SUMMATIVE_ITEMS_PER_MODULE,
+      setPretestQuestionIds(baseForGenerationQuestionIds)
+      setPretestSelectedAnswers(baseForGenerationSelectedAnswers)
+
+      const generatedQuestions = getCATPosttestInitialQuestions({
         stage,
+        pretestQuestionIds: baseForGenerationQuestionIds,
+        pretestSelectedAnswers: baseForGenerationSelectedAnswers,
       })
 
       const resolvedQuestions = retakeRequested
@@ -230,7 +264,7 @@ const SummativePosttestPage = () => {
         uid,
         assessmentKey,
         score,
-        totalItems: questions.length,
+        totalItems: totalPossible,
         percentage: scorePercentage,
         passed: passed,
         competencyBreakdown: {},
@@ -260,6 +294,7 @@ const SummativePosttestPage = () => {
     scorePercentage,
     passed,
     questions,
+    totalPossible,
   ])
 
   const handleSelectAnswer = (optionIndex: number) => {
@@ -300,7 +335,7 @@ const SummativePosttestPage = () => {
         ...attemptDetails,
         {
           score,
-          totalItems: questions.length,
+          totalItems: totalPossible,
           percentage: scorePercentage,
           questionIds: questions.map((question) => question.id),
           selectedAnswers: selectedAnswersForStorage,
@@ -312,7 +347,7 @@ const SummativePosttestPage = () => {
         uid,
         assessmentKey,
         score,
-        totalItems: questions.length,
+        totalItems: totalPossible,
         percentage: scorePercentage,
         passed,
         competencyBreakdown: {},
@@ -443,7 +478,7 @@ const SummativePosttestPage = () => {
           <CheckCircle2 className="mx-auto text-emerald-500 mb-4" size={44} />
           <h2 className={`text-2xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>Summative Completed</h2>
           <p className={`mt-2 text-sm ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
-            You scored {score} out of {questions.length} ({scorePercentage}%).
+            You scored {formatPoints(score)} out of {formatPoints(totalPossible)} points ({scorePercentage}%).
           </p>
           <p className={`mt-2 text-xs font-black uppercase tracking-wider ${passed ? 'text-emerald-500' : 'text-amber-500'}`}>
             {passed ? 'Passed' : `Need ${SUMMATIVE_PASSING_PERCENTAGE}% to pass`}
@@ -458,9 +493,48 @@ const SummativePosttestPage = () => {
         </div>
       ) : hasStarted ? (
         <>
-          <article className={`rounded-3xl border p-6 md:p-8 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
+          <div className="flex flex-col lg:flex-row-reverse gap-6">
+            <aside className={`rounded-3xl border p-4 lg:w-64 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                Questions · {formatPoints(totalPossible)}/{POSTTEST_POINTS_LIMIT} pts
+              </p>
+              <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
+                {questions.map((question, index) => {
+                  const isCurrent = index === currentQuestionIndex
+                  const isAnswered = selectedAnswers[question.id] !== undefined
+
+                  return (
+                    <button
+                      key={question.id}
+                      type="button"
+                      onClick={() => setCurrentQuestionIndex(index)}
+                      className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left transition-colors ${
+                        isCurrent
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : isBrightMode
+                            ? 'border-slate-200 bg-white hover:border-slate-300'
+                            : 'border-slate-700/60 bg-[#0f172a] hover:border-slate-600'
+                      }`}
+                    >
+                      <span className={`text-sm font-black ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>
+                        Q{index + 1}
+                        <span className={`ml-2 text-[10px] font-black uppercase tracking-widest ${isAnswered ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {isAnswered ? 'Done' : 'Todo'}
+                        </span>
+                      </span>
+                      <span className={`shrink-0 text-[11px] font-black ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
+                        {formatPoints(question.weight)} pt{question.weight === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </aside>
+
+            <div className="flex-1">
+              <article className={`rounded-3xl border p-6 md:p-8 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
             <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">
-              Question {currentQuestionIndex + 1} of {questions.length}
+              Question {currentQuestionIndex + 1} · {formatPoints(currentQuestion?.weight ?? 0)} pt{(currentQuestion?.weight ?? 0) === 1 ? '' : 's'}
             </p>
             <h2 className={`mt-4 text-xl md:text-2xl font-black leading-snug ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>
               {currentQuestion?.question}
@@ -492,10 +566,10 @@ const SummativePosttestPage = () => {
 
           <div className="mt-6 flex items-center justify-end">
             <div className="w-full sm:w-auto flex items-center gap-3">
-              {canGoNext ? (
+              {canGoNext || nextAdaptiveQuestion ? (
                 <button
                   type="button"
-                  onClick={() => setCurrentQuestionIndex((index) => Math.min(questions.length - 1, index + 1))}
+                  onClick={handleAdvance}
                   disabled={!hasAnswerForCurrentQuestion}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-blue-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -515,7 +589,8 @@ const SummativePosttestPage = () => {
               )}
             </div>
           </div>
-
+            </div>
+          </div>
         </>
       ) : null}
     </section>

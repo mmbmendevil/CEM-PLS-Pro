@@ -506,7 +506,7 @@ const PersonalizedStudyPlanPage = () => {
           </div>
 
           <p className={`text-center text-sm ${muted}`}>
-            Flow order: Wrong answers first, unseen questions second, correctly answered questions last.
+            Flow order: Wrong answers first, correctly answered questions last.
           </p>
         </div>
       </section>

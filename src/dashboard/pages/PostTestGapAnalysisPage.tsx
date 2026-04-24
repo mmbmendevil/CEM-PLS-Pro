@@ -20,7 +20,7 @@ import { getLearningStageConfig, getStageSummativeRecord, resolveStageForSelecti
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
 import { getUserAssessmentProgress } from '../../services/assessmentProgress'
-import { getDiagnosticQuestionPoolForStage, getDiagnosticQuestionsByIdsForStage, normalizeSelectedAnswersForStage } from '../data/diagnosticQuestions'
+import { computeModuleGapPerformance, getDiagnosticQuestionPoolForStage, getDiagnosticQuestionsByIdsForStage, normalizeSelectedAnswersForStage } from '../data/diagnosticQuestions'
 
 const THRESHOLD = 75
 
@@ -62,22 +62,16 @@ type ConceptNodeData = {
   color: string
 }
 
-const CONCEPT_LABELS: Record<string, string> = {
-  MH: 'Memory Hierarchy',
-  CPU: 'CPU Components',
-  PIPE: 'Pipeline Architecture',
-  CM: 'Cache Memory',
-  VM: 'Virtual Memory',
-  ILP: 'Advanced Execution',
-}
-
 const RECOMMENDED_TOPIC_NOTES: Record<string, string> = {
-  MH: 'Focus on cache locality, hit/miss behavior, and why hierarchy balances speed and cost.',
-  CPU: 'Review how ALU, Control Unit, and registers coordinate in instruction execution.',
-  PIPE: 'Practice identifying hazards and predicting throughput effects in staged execution.',
-  CM: 'Review hit/miss flow, mapping methods, and trade-offs of associative cache designs.',
-  VM: 'Focus on paging, address translation, and how virtual memory supports protection and multitasking.',
-  ILP: 'Practice hazards, out-of-order execution, and why ILP gains trade off with complexity and power.',
+  'CPU Components': 'Review how the ALU, Control Unit, and registers coordinate instruction execution and control signals.',
+  'Architecture Fundamentals': 'Focus on Von Neumann vs. Harvard trade-offs, bottlenecks, and why parallel instruction/data access matters.',
+  'Memory Hierarchy': 'Focus on locality, hit/miss behavior, and why the hierarchy balances speed, cost, and capacity.',
+  'Cache Organization': 'Review cache hits/misses, mapping methods, associativity trade-offs, and data-oriented access patterns.',
+  'Virtual Memory and ECC': 'Focus on paging, address translation, protection/isolation, and performance trade-offs like TLB behavior.',
+  'Instruction Set Architecture': 'Review RISC vs. CISC trade-offs, instruction formats, and pipeline-friendly decoding considerations.',
+  'Pipelining and Hazards': 'Practice identifying hazards, understanding stalls, and reasoning about throughput and structural limits.',
+  'Advanced Execution': 'Review ILP limits, out-of-order execution, renaming, and why deeper pipelines trade off with penalties.',
+  'Performance Analysis': 'Practice execution-time reasoning using instruction count, CPI, and clock frequency; apply Amdahl’s Law.',
 }
 
 type GapTabKey = 'overview' | 'concept-graph' | 'recommendations' | 'next-steps'
@@ -155,8 +149,11 @@ const PostTestGapAnalysisPage = () => {
   }, [uid, selectedStage])
 
   const activeQuestions = useMemo(() => {
-    const stagePool = getDiagnosticQuestionPoolForStage(activeStage)
-    return questionIds.length > 0 ? getDiagnosticQuestionsByIdsForStage(questionIds, activeStage) : stagePool
+    if (questionIds.length <= 0) {
+      return getDiagnosticQuestionPoolForStage(activeStage)
+    }
+
+    return getDiagnosticQuestionsByIdsForStage(questionIds, activeStage)
   }, [questionIds, activeStage])
 
   const postTestQAItems = useMemo(() => {
@@ -177,6 +174,10 @@ const PostTestGapAnalysisPage = () => {
     })
   }, [activeQuestions, selectedAnswers])
 
+  const moduleResults = useMemo(() => {
+    return computeModuleGapPerformance(activeQuestions, selectedAnswers, activeStage)
+  }, [activeQuestions, selectedAnswers, activeStage])
+
   const radarData = useMemo(() => {
     const palette = [
       { color: 'bg-cyan-500', stroke: '#06b6d4' },
@@ -185,61 +186,28 @@ const PostTestGapAnalysisPage = () => {
       { color: 'bg-amber-500', stroke: '#f59e0b' },
     ]
 
-    const competencyScores = new Map<string, { correct: number; total: number }>()
-
-    for (const question of activeQuestions) {
-      const answerIndex = selectedAnswers[question.id]
-      const isCorrect = answerIndex !== undefined && answerIndex === question.correctAnswerIndex
-      const current = competencyScores.get(question.competencyCode) ?? { correct: 0, total: 0 }
-
-      current.total += 1
-      current.correct += isCorrect ? 1 : 0
-      competencyScores.set(question.competencyCode, current)
-    }
-
-    return Array.from(competencyScores.entries()).map(([label, result], index) => {
+    return moduleResults.map((entry, index) => {
       const style = palette[index % palette.length]
       return {
-        label,
-        percent: result.total > 0 ? toPercentage(result.correct, result.total) : 0,
+        label: entry.module,
+        percent: Number(entry.modulePerformance.toFixed(2)),
         color: style.color,
         stroke: style.stroke,
+        moduleGapScore: entry.moduleGapScore,
+        moduleTotalWeight: entry.moduleTotalWeight,
+        totalQuestions: entry.totalQuestions,
+        wrongQuestions: entry.wrongQuestions,
       }
     })
-  }, [activeQuestions, selectedAnswers])
-
-  const competencyStats = useMemo(() => {
-    const stats: Record<string, { correct: number; total: number; mistakes: number }> = {}
-
-    for (const question of activeQuestions) {
-      const competency = question.competencyCode
-
-      if (!stats[competency]) {
-        stats[competency] = { correct: 0, total: 0, mistakes: 0 }
-      }
-
-      const isCorrect = selectedAnswers[question.id] === question.correctAnswerIndex
-      stats[competency].total += 1
-      stats[competency].correct += isCorrect ? 1 : 0
-      stats[competency].mistakes += isCorrect ? 0 : 1
-    }
-
-    return stats
-  }, [activeQuestions, selectedAnswers])
+  }, [moduleResults])
 
   const gapAnalysis = useMemo(() => {
-    return Object.entries(competencyStats)
-      .map(([competencyCode, stats]) => {
-        const percent = toPercentage(stats.correct, stats.total)
+    return moduleResults.filter((entry) => entry.modulePerformance < THRESHOLD)
+  }, [moduleResults])
 
-        return {
-          competencyCode,
-          percent,
-          deviation: Number((THRESHOLD - percent).toFixed(2)),
-        }
-      })
-      .filter((entry) => entry.percent < THRESHOLD)
-  }, [competencyStats])
+  const moduleResultByModule = useMemo(() => {
+    return new Map(moduleResults.map((entry) => [entry.module, entry]))
+  }, [moduleResults])
 
   const computedPercentage = useMemo(() => {
     return toPercentage(score, totalItems)
@@ -497,15 +465,15 @@ const PostTestGapAnalysisPage = () => {
                 <div className={`rounded-[3rem] border p-6 md:p-8 ${cardSurface}`}>
                   <div className="mb-5 flex flex-wrap items-center gap-2">
                     {radarData.map((entry) => (
-                      <span
-                        key={`legend-${entry.label}`}
-                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-700 bg-slate-900 text-slate-200'}`}
-                      >
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.stroke }} />
-                        {entry.label} - {CONCEPT_LABELS[entry.label] ?? entry.label}
-                      </span>
-                    ))}
-                  </div>
+                    <span
+                      key={`legend-${entry.label}`}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-700 bg-slate-900 text-slate-200'}`}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.stroke }} />
+                      {entry.label}
+                    </span>
+                  ))}
+                </div>
 
                   <div className={`rounded-4xl border overflow-hidden ${isBrightMode ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-[#020617]'}`}>
                     <div className="h-125 w-full">
@@ -590,7 +558,7 @@ const PostTestGapAnalysisPage = () => {
                   {[...radarData]
                     .sort((a, b) => a.percent - b.percent)
                     .map((entry, index) => {
-                      const stats = competencyStats[entry.label as keyof typeof competencyStats] ?? { correct: 0, total: 0, mistakes: 0 }
+                      const stats = moduleResultByModule.get(entry.label) ?? { wrongQuestions: 0, totalQuestions: 0 }
                       const feedback = getRecommendationFeedback(entry.percent)
 
                       return (
@@ -600,16 +568,16 @@ const PostTestGapAnalysisPage = () => {
                         >
                           <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${mutedText}`}>Priority #{index + 1}</p>
                           <h3 className={`mt-2 text-lg font-black ${highlightText}`}>
-                            {entry.label} - {CONCEPT_LABELS[entry.label] ?? entry.label}
+                            {entry.label}
                           </h3>
-                          <p className={`mt-2 text-sm ${mutedText}`}>{RECOMMENDED_TOPIC_NOTES[entry.label] ?? 'Review this competency in depth.'}</p>
+                          <p className={`mt-2 text-sm ${mutedText}`}>{RECOMMENDED_TOPIC_NOTES[entry.label] ?? 'Review this module in depth.'}</p>
                           <p
                             className={`mt-3 text-xs font-black uppercase tracking-widest ${entry.percent >= 90 ? 'text-cyan-500' : entry.percent >= 75 ? 'text-emerald-500' : entry.percent >= 50 ? 'text-amber-500' : 'text-rose-500'}`}
                           >
                             Current mastery: {formatPercentage(entry.percent)}%
                           </p>
                           <p className={`mt-2 text-xs font-semibold ${mutedText}`}>
-                            Mistakes: {stats.mistakes} of {stats.total} questions
+                            Mistakes: {stats.wrongQuestions} of {stats.totalQuestions} questions
                           </p>
                           <p className={`mt-2 text-xs leading-relaxed ${mutedText}`}>{feedback}</p>
                         </article>

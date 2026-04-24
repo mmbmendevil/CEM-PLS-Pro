@@ -114,7 +114,7 @@ const FlashcardReviewPage = () => {
     return activeQuestions
       .filter((question) => {
         const selected = selectedAnswers[question.id]
-        return selected === undefined || selected !== question.correctAnswerIndex
+        return selected !== undefined && selected !== question.correctAnswerIndex
       })
       .map((question) => ({
         id: question.id,
@@ -275,7 +275,6 @@ const FlashcardReviewPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
               {moduleDecks.map((deck) => {
                 const wrongCount = deck.questions.filter((item) => item.bucket === 'wrong').length
-                const unseenCount = deck.questions.filter((item) => item.bucket === 'unseen').length
                 const correctCount = deck.questions.filter((item) => item.bucket === 'correct').length
 
                 return (
@@ -302,7 +301,6 @@ const FlashcardReviewPage = () => {
 
                     <div className="mt-5 space-y-2">
                       <p className={`text-xs font-bold uppercase tracking-widest ${isBrightMode ? 'text-rose-600' : 'text-rose-300'}`}>Wrong: {wrongCount}</p>
-                      <p className={`text-xs font-bold uppercase tracking-widest ${isBrightMode ? 'text-amber-600' : 'text-amber-300'}`}>Unseen: {unseenCount}</p>
                       <p className={`text-xs font-bold uppercase tracking-widest ${isBrightMode ? 'text-emerald-600' : 'text-emerald-300'}`}>Correct: {correctCount}</p>
                     </div>
 

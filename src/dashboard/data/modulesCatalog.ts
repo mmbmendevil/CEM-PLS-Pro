@@ -1,3 +1,5 @@
+import { MODULE_CONFIG } from './moduleConfig'
+
 export type ModuleVideoAsset = {
   src: string
   mimeType: 'video/mp4'
@@ -16,13 +18,21 @@ export type ModuleCatalogItem = {
   video: ModuleVideoAsset
 }
 
+const getModuleConfig = (id: number) => {
+  const moduleConfig = MODULE_CONFIG.find((entry) => entry.id === id)
+  if (!moduleConfig) {
+    throw new Error(`Missing MODULE_CONFIG for module id ${id}`)
+  }
+  return moduleConfig
+}
+
 export const MODULES_CATALOG: ModuleCatalogItem[] = [
   {
-    id: 1,
+    id: getModuleConfig(1).id,
     slug: 'cpu-components',
-    order: 1,
-    title: 'CPU Components',
-    competencyCode: 'CPU',
+    order: getModuleConfig(1).order,
+    title: getModuleConfig(1).title,
+    competencyCode: getModuleConfig(1).competencyCode,
     description: 'Detailed analysis of CPU building blocks: ALU design, control unit architectures...',
     lessonContent: `Central Processing Unit (CPU)
 
@@ -116,11 +126,11 @@ CPUs are everywhere, not just in computers:
     },
   },
   {
-    id: 2,
+    id: getModuleConfig(2).id,
     slug: 'architecture-fundamentals',
-    order: 2,
-    title: 'Architecture Fundamentals',
-    competencyCode: 'ARCH',
+    order: getModuleConfig(2).order,
+    title: getModuleConfig(2).title,
+    competencyCode: getModuleConfig(2).competencyCode,
     description: 'Core concepts of computer architecture: von Neumann vs Harvard models, stored-program concept...',
     lessonContent: `Difference between Von Neumann and Harvard Architecture
 
@@ -196,11 +206,11 @@ Key Differences Between Von Neumann and Harvard Architecture
     },
   },
   {
-    id: 3,
+    id: getModuleConfig(3).id,
     slug: 'memory-hierarchy',
-    order: 3,
-    title: 'Memory Hierarchy',
-    competencyCode: 'MH',
+    order: getModuleConfig(3).order,
+    title: getModuleConfig(3).title,
+    competencyCode: getModuleConfig(3).competencyCode,
     description: 'Memory system organization: register files, SRAM caches, DRAM main memory, secondary storage...',
     lessonContent: `Memory Hierarchy Design and its Characteristics
 
@@ -265,11 +275,11 @@ Disadvantages of Memory Hierarchy
     },
   },
   {
-    id: 4,
+    id: getModuleConfig(4).id,
     slug: 'cache-organization',
-    order: 4,
-    title: 'Cache Organization',
-    competencyCode: 'CACHE',
+    order: getModuleConfig(4).order,
+    title: getModuleConfig(4).title,
+    competencyCode: getModuleConfig(4).competencyCode,
     description: 'Cache design and optimization: direct-mapped, set-associative, and fully associative caches...',
     lessonContent: `Cache Memory in Computer Organization
 
@@ -408,11 +418,11 @@ Disadvantages
     },
   },
   {
-    id: 5,
+    id: getModuleConfig(5).id,
     slug: 'virtual-memory-and-ecc',
-    order: 5,
-    title: 'Virtual Memory and ECC',
-    competencyCode: 'VM',
+    order: getModuleConfig(5).order,
+    title: getModuleConfig(5).title,
+    competencyCode: getModuleConfig(5).competencyCode,
     description: 'Virtual memory and reliability: page tables, TLB operation, demand paging...',
     lessonContent: `Virtual Memory in Operating System
 
@@ -562,11 +572,11 @@ Virtual Memory vs Physical Memory
     },
   },
   {
-    id: 6,
+    id: getModuleConfig(6).id,
     slug: 'instruction-set-architecture',
-    order: 6,
-    title: 'Instruction Set Architecture',
-    competencyCode: 'ISA',
+    order: getModuleConfig(6).order,
+    title: getModuleConfig(6).title,
+    competencyCode: getModuleConfig(6).competencyCode,
     description: 'Study of ISA design philosophies: RISC vs CISC approaches, fixed vs variable-length encoding...',
     lessonContent: `Instruction Set Architecture and Microarchitecture
 
@@ -659,11 +669,11 @@ There are multiple types of ISA, each designed with different goals in mind, suc
     },
   },
   {
-    id: 7,
+    id: getModuleConfig(7).id,
     slug: 'pipelining-and-hazards',
-    order: 7,
-    title: 'Pipelining and Hazards',
-    competencyCode: 'PIPE',
+    order: getModuleConfig(7).order,
+    title: getModuleConfig(7).title,
+    competencyCode: getModuleConfig(7).competencyCode,
     description: 'Instruction pipelining: 5-stage pipeline design, data hazards, control hazards...',
     lessonContent: `Pipelined architecture with its diagram
 
@@ -784,11 +794,11 @@ Disadvantages of Pipelining
     },
   },
   {
-    id: 8,
+    id: getModuleConfig(8).id,
     slug: 'advanced-execution',
-    order: 8,
-    title: 'Advanced Execution',
-    competencyCode: 'ILP',
+    order: getModuleConfig(8).order,
+    title: getModuleConfig(8).title,
+    competencyCode: getModuleConfig(8).competencyCode,
     description: 'Advanced CPU techniques: out-of-order execution, register renaming, speculative execution...',
     lessonContent: `Instruction Level Parallelism
 
@@ -854,11 +864,11 @@ Disadvantages of Instruction-Level Parallelism
     },
   },
   {
-    id: 9,
+    id: getModuleConfig(9).id,
     slug: 'performance-analysis',
-    order: 9,
-    title: 'Performance Analysis',
-    competencyCode: 'PERF',
+    order: getModuleConfig(9).order,
+    title: getModuleConfig(9).title,
+    competencyCode: getModuleConfig(9).competencyCode,
     description: 'Quantitative performance evaluation: CPU time equation, CPI analysis, MIPS and FLOPS metrics...',
     lessonContent: `Computer Organization - Amdahls law and its proof.txt
 Computer Organization | Amdahl's law and its proof

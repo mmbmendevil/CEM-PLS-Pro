@@ -6,8 +6,10 @@ import { useBrightness } from '../../contexts/BrightnessContext'
 import { useGradingStage } from '@/contexts/GradingStageContext'
 import { getLearningStageConfig, getStageDiagnosticRecord, resolveStageForSelection, type LearningStageKey } from '../data/learningStage'
 import {
+  PRETEST_POINTS_LIMIT,
+  getCATPretestInitialQuestions,
+  getCATPretestNextQuestion,
   getDiagnosticQuestionsByIdsForStage,
-  getRandomDiagnosticPretestQuestions,
 } from '../data/diagnosticQuestions'
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
@@ -22,11 +24,13 @@ const toPercentage = (correct: number, total: number) => {
   return Number(((correct / total) * 100).toFixed(2))
 }
 
+const formatPoints = (points: number) => String(Math.round(points * 2) / 2).replace(/\.0$/, '')
+
 const DiagnosticPretestPage = () => {
   const { isBrightMode } = useBrightness()
   const { selectedStage } = useGradingStage()
   const navigate = useNavigate()
-  const [questions, setQuestions] = useState(() => getRandomDiagnosticPretestQuestions())
+  const [questions, setQuestions] = useState(() => getCATPretestInitialQuestions('prelim'))
   const [hasStarted, setHasStarted] = useState(false)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
@@ -44,9 +48,32 @@ const DiagnosticPretestPage = () => {
   const hasAnswerForCurrentQuestion = selectedAnswers[currentQuestion.id] !== undefined
   const allAnswered = answeredCount === questions.length
 
+  const nextAdaptiveQuestion = currentQuestionIndex === questions.length - 1
+    ? getCATPretestNextQuestion({
+      stage: activeStage,
+      questionIds: questions.map((question) => question.id),
+      selectedAnswers,
+      maxTotalPoints: PRETEST_POINTS_LIMIT,
+    })
+    : null
+
+  const handleAdvance = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((index) => Math.min(questions.length - 1, index + 1))
+      return
+    }
+
+    if (!nextAdaptiveQuestion) {
+      return
+    }
+
+    setQuestions((current) => [...current, nextAdaptiveQuestion])
+    setCurrentQuestionIndex((index) => index + 1)
+  }
+
   const score = useMemo(() => {
     return questions.reduce((total, question) => {
-      return selectedAnswers[question.id] === question.correctAnswerIndex ? total + 1 : total
+      return selectedAnswers[question.id] === question.correctAnswerIndex ? total + question.weight : total
     }, 0)
   }, [questions, selectedAnswers])
 
@@ -58,8 +85,8 @@ const DiagnosticPretestPage = () => {
       const isCorrect = selectedAnswers[question.id] === question.correctAnswerIndex
       const current = bucket.get(code) ?? { correct: 0, total: 0 }
 
-      current.total += 1
-      current.correct += isCorrect ? 1 : 0
+      current.total += question.weight
+      current.correct += isCorrect ? question.weight : 0
       bucket.set(code, current)
     }
 
@@ -75,7 +102,11 @@ const DiagnosticPretestPage = () => {
     )
   }, [questions, selectedAnswers])
 
-  const scorePercentage = toPercentage(score, questions.length)
+  const totalPossible = useMemo(() => {
+    return questions.reduce((total, question) => total + question.weight, 0)
+  }, [questions])
+
+  const scorePercentage = toPercentage(score, totalPossible)
   const passed = scorePercentage >= DIAGNOSTIC_PASSING_PERCENTAGE
 
   useEffect(() => {
@@ -114,7 +145,7 @@ const DiagnosticPretestPage = () => {
       setAssessmentKey(stageConfig.diagnosticAssessmentKey)
 
       if (!record) {
-        const generatedQuestions = getRandomDiagnosticPretestQuestions(undefined, stage)
+        const generatedQuestions = getCATPretestInitialQuestions(stage)
         setQuestions(generatedQuestions)
 
         if (!isCancelled) {
@@ -127,7 +158,7 @@ const DiagnosticPretestPage = () => {
 
       const resolvedQuestions = persistedQuestionIds.length > 0
         ? getDiagnosticQuestionsByIdsForStage(persistedQuestionIds, stage)
-        : getRandomDiagnosticPretestQuestions(undefined, stage)
+        : getCATPretestInitialQuestions(stage)
       setQuestions(resolvedQuestions)
 
       const restoredAnswers = Object.fromEntries(
@@ -165,7 +196,7 @@ const DiagnosticPretestPage = () => {
         uid,
         assessmentKey,
         score,
-        totalItems: questions.length,
+        totalItems: totalPossible,
         percentage: scorePercentage,
         passed: hasEverPassed,
         competencyBreakdown,
@@ -192,6 +223,7 @@ const DiagnosticPretestPage = () => {
     scorePercentage,
     competencyBreakdown,
     questions.length,
+    totalPossible,
   ])
 
   const handleSelectAnswer = (optionIndex: number) => {
@@ -226,7 +258,7 @@ const DiagnosticPretestPage = () => {
       uid,
       assessmentKey,
       score,
-      totalItems: questions.length,
+      totalItems: totalPossible,
       percentage: scorePercentage,
       passed: finalPassed,
       competencyBreakdown,
@@ -291,7 +323,7 @@ const DiagnosticPretestPage = () => {
           <CheckCircle2 className="mx-auto text-emerald-500 mb-4" size={44} />
           <h2 className={`text-2xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>Pre-test Completed</h2>
           <p className={`mt-2 text-sm ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
-            You scored {score} out of {questions.length} ({scorePercentage}%).
+            You scored {formatPoints(score)} out of {formatPoints(totalPossible)} points ({scorePercentage}%).
           </p>
           <p className={`mt-2 text-xs font-black uppercase tracking-wider ${passed ? 'text-emerald-500' : 'text-amber-500'}`}>
             {passed ? 'Passed' : `Need ${DIAGNOSTIC_PASSING_PERCENTAGE}% to pass`}
@@ -307,10 +339,12 @@ const DiagnosticPretestPage = () => {
         </div>
       ) : hasStarted ? (
         <>
-          <article className={`rounded-3xl border p-6 md:p-8 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
-            <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">
-              Question {currentQuestionIndex + 1} of {questions.length}
-            </p>
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex-1">
+              <article className={`rounded-3xl border p-6 md:p-8 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
+                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">
+                  Question {currentQuestionIndex + 1} · {formatPoints(currentQuestion.weight)} pt{currentQuestion.weight === 1 ? '' : 's'}
+                </p>
             <h2 className={`mt-4 text-xl md:text-2xl font-black leading-snug ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>
               {currentQuestion.question}
             </h2>
@@ -339,30 +373,69 @@ const DiagnosticPretestPage = () => {
             </div>
           </article>
 
-          <div className="mt-6 flex items-center justify-end">
-            <div className="w-full sm:w-auto flex items-center gap-3">
-              {canGoNext ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrentQuestionIndex((index) => Math.min(questions.length - 1, index + 1))}
-                  disabled={!hasAnswerForCurrentQuestion}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-blue-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                  <ChevronRight size={14} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!allAnswered}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Submit Test
-                  <CheckCircle2 size={14} />
-                </button>
-              )}
+              <div className="mt-6 flex items-center justify-end">
+                <div className="w-full sm:w-auto flex items-center gap-3">
+                  {canGoNext || nextAdaptiveQuestion ? (
+                    <button
+                      type="button"
+                      onClick={handleAdvance}
+                      disabled={!hasAnswerForCurrentQuestion}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-blue-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!allAnswered}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Submit Test
+                      <CheckCircle2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+
+            <aside className={`rounded-3xl border p-4 lg:w-64 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                Questions · {formatPoints(totalPossible)}/{PRETEST_POINTS_LIMIT} pts
+              </p>
+              <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
+                {questions.map((question, index) => {
+                  const isCurrent = index === currentQuestionIndex
+                  const isAnswered = selectedAnswers[question.id] !== undefined
+
+                  return (
+                    <button
+                      key={question.id}
+                      type="button"
+                      onClick={() => setCurrentQuestionIndex(index)}
+                      className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left transition-colors ${
+                        isCurrent
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : isBrightMode
+                            ? 'border-slate-200 bg-white hover:border-slate-300'
+                            : 'border-slate-700/60 bg-[#0f172a] hover:border-slate-600'
+                      }`}
+                    >
+                      <span className={`text-sm font-black ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>
+                        Q{index + 1}
+                        <span className={`ml-2 text-[10px] font-black uppercase tracking-widest ${isAnswered ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {isAnswered ? 'Done' : 'Todo'}
+                        </span>
+                      </span>
+                      <span className={`shrink-0 text-[11px] font-black ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
+                        {formatPoints(question.weight)} pt{question.weight === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </aside>
           </div>
         </>
       ) : null}
