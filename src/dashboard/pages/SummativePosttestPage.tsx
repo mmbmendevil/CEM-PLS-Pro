@@ -1,4 +1,4 @@
-import { onAuthStateChanged } from 'firebase/auth'
+﻿import { onAuthStateChanged } from 'firebase/auth'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -48,11 +48,8 @@ const SummativePosttestPage = () => {
   const [attemptDetails, setAttemptDetails] = useState<SummativeAttemptDetail[]>([])
 
   const currentQuestion = questions[currentQuestionIndex]
-  const answeredCount = Object.keys(selectedAnswers).length
-  const completionPercentage = Math.round((answeredCount / questions.length) * 100)
   const canGoNext = currentQuestionIndex < questions.length - 1
   const hasAnswerForCurrentQuestion = currentQuestion ? selectedAnswers[currentQuestion.id] !== undefined : false
-  const allAnswered = questions.length > 0 && answeredCount === questions.length
   const attemptsRemaining = Math.max(SUMMATIVE_MAX_FAILED_ATTEMPTS - failedAttempts, 0)
 
   const nextAdaptiveQuestion = !isSubmitted && currentQuestionIndex === questions.length - 1
@@ -89,6 +86,26 @@ const SummativePosttestPage = () => {
   const totalPossible = useMemo(() => {
     return questions.reduce((total, question) => total + question.weight, 0)
   }, [questions])
+
+  const answeredCount = useMemo(() => {
+    return questions.reduce((count, question) => (selectedAnswers[question.id] === undefined ? count : count + 1), 0)
+  }, [questions, selectedAnswers])
+
+  const answeredPossiblePoints = useMemo(() => {
+    return questions.reduce((total, question) => {
+      return selectedAnswers[question.id] === undefined ? total : total + question.weight
+    }, 0)
+  }, [questions, selectedAnswers])
+
+  const allAnswered = questions.length > 0 && answeredCount === questions.length
+  const isAdaptiveComplete = !canGoNext && nextAdaptiveQuestion === null
+
+  const completionPercentage =
+    isSubmitted || (allAnswered && isAdaptiveComplete)
+      ? 100
+      : POSTTEST_POINTS_LIMIT > 0
+        ? Math.max(0, Math.min(100, Math.round((answeredPossiblePoints / POSTTEST_POINTS_LIMIT) * 100)))
+        : 0
 
   const scorePercentage = toPercentage(score, totalPossible)
   const passed = scorePercentage >= SUMMATIVE_PASSING_PERCENTAGE
@@ -496,7 +513,7 @@ const SummativePosttestPage = () => {
           <div className="flex flex-col lg:flex-row-reverse gap-6">
             <aside className={`rounded-3xl border p-4 lg:w-64 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
               <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-                Questions · {formatPoints(totalPossible)}/{POSTTEST_POINTS_LIMIT} pts
+                Answered · {formatPoints(answeredPossiblePoints)}/{POSTTEST_POINTS_LIMIT} pts
               </p>
               <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
                 {questions.map((question, index) => {

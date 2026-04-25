@@ -1,4 +1,4 @@
-import { onAuthStateChanged } from 'firebase/auth'
+﻿import { onAuthStateChanged } from 'firebase/auth'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -42,11 +42,8 @@ const DiagnosticPretestPage = () => {
   const [assessmentKey, setAssessmentKey] = useState(getLearningStageConfig('prelim').diagnosticAssessmentKey)
 
   const currentQuestion = questions[currentQuestionIndex]
-  const answeredCount = Object.keys(selectedAnswers).length
-  const completionPercentage = Math.round((answeredCount / questions.length) * 100)
   const canGoNext = currentQuestionIndex < questions.length - 1
   const hasAnswerForCurrentQuestion = selectedAnswers[currentQuestion.id] !== undefined
-  const allAnswered = answeredCount === questions.length
 
   const nextAdaptiveQuestion = currentQuestionIndex === questions.length - 1
     ? getCATPretestNextQuestion({
@@ -105,6 +102,26 @@ const DiagnosticPretestPage = () => {
   const totalPossible = useMemo(() => {
     return questions.reduce((total, question) => total + question.weight, 0)
   }, [questions])
+
+  const answeredCount = useMemo(() => {
+    return questions.reduce((count, question) => (selectedAnswers[question.id] === undefined ? count : count + 1), 0)
+  }, [questions, selectedAnswers])
+
+  const answeredPossiblePoints = useMemo(() => {
+    return questions.reduce((total, question) => {
+      return selectedAnswers[question.id] === undefined ? total : total + question.weight
+    }, 0)
+  }, [questions, selectedAnswers])
+
+  const allAnswered = questions.length > 0 && answeredCount === questions.length
+  const isAdaptiveComplete = !canGoNext && nextAdaptiveQuestion === null
+
+  const completionPercentage =
+    isSubmitted || (allAnswered && isAdaptiveComplete)
+      ? 100
+      : PRETEST_POINTS_LIMIT > 0
+        ? Math.max(0, Math.min(100, Math.round((answeredPossiblePoints / PRETEST_POINTS_LIMIT) * 100)))
+        : 0
 
   const scorePercentage = toPercentage(score, totalPossible)
   const passed = scorePercentage >= DIAGNOSTIC_PASSING_PERCENTAGE
@@ -172,6 +189,7 @@ const DiagnosticPretestPage = () => {
       setCurrentQuestionIndex(restoredQuestionIndex)
       setIsSubmitted(record.isSubmitted ?? false)
       setHasEverPassed(record.passed === true)
+      setHasStarted(Boolean((record.isSubmitted ?? false) || restoredQuestionIndex > 0 || Object.keys(restoredAnswers).length > 0))
       setIsHydratingState(false)
     }
 
@@ -402,7 +420,7 @@ const DiagnosticPretestPage = () => {
 
             <aside className={`rounded-3xl border p-4 lg:w-64 ${isBrightMode ? 'border-slate-200 bg-white' : 'border-slate-700/60 bg-[#111827]'}`}>
               <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-                Questions · {formatPoints(totalPossible)}/{PRETEST_POINTS_LIMIT} pts
+                Answered · {formatPoints(answeredPossiblePoints)}/{PRETEST_POINTS_LIMIT} pts
               </p>
               <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
                 {questions.map((question, index) => {
