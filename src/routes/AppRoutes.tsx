@@ -24,6 +24,7 @@ import LoginPage from '../auth/LoginPage'
 import SigninPage from '../auth/SigninPage'
 import AdminRoute from '../admin/components/AdminRoute'
 import AdminDashboardPage from '../admin/pages/AdminDashboardPage'
+import AdminItemAnalysisPage from '../admin/pages/AdminItemAnalysisPage'
 import AdminLoginPage from '../admin/pages/AdminLoginPage'
 import {
   getStageDiagnosticRecord,
@@ -199,6 +200,10 @@ const AppRoutes = () => {
       <Route
         path={ROUTE_PATHS.admin.home}
         element={<AdminRoute element={<AdminDashboardPage />} />}
+      />
+      <Route
+        path={ROUTE_PATHS.admin.itemAnalysis}
+        element={<AdminRoute element={<AdminItemAnalysisPage />} />}
       />
       <Route
         path={ROUTE_PATHS.dashboard.home}

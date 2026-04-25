@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ShieldCheck, Users, GraduationCap, ChartLine, MailCheck, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
+import { ShieldCheck, Users, GraduationCap, ChartLine, MailCheck, RefreshCw, RotateCcw, Trash2, BarChart3 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useBrightness } from '@/contexts/BrightnessContext'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -316,6 +316,18 @@ const AdminDashboardPage = () => {
           >
             <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(ROUTE_PATHS.admin.itemAnalysis)}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+              isBrightMode
+                ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
+                : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+            }`}
+          >
+            <BarChart3 size={16} />
+            Item analysis
           </button>
           <button
             type="button"

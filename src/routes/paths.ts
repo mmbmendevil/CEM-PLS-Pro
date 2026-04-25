@@ -6,6 +6,7 @@ export const ROUTE_PATHS = {
   admin: {
     login: '/admin/login',
     home: '/admin',
+    itemAnalysis: '/admin/item-analysis',
   },
   dashboard: {
     home: '/dashboard',

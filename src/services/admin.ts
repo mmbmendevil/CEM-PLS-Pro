@@ -7,6 +7,12 @@ import {
   getStageSummativeRecord,
   type LearningStageKey,
 } from '@/dashboard/data/learningStage'
+import {
+  getDiagnosticQuestionsByIdsForStage,
+  normalizeSelectedAnswersForStage,
+  type DiagnosticQuestion,
+  type DiagnosticQuestionStage,
+} from '@/dashboard/data/diagnosticQuestions'
 import { db } from '@/lib/firebase'
 import type { AssessmentProgressRecord, SummativeAttemptDetail } from '@/services/assessmentProgress'
 import { getUserAssessmentProgress } from '@/services/assessmentProgress'
@@ -44,6 +50,26 @@ const roundToOne = (value: number) => Math.round(value * 10) / 10
 const ASSESSMENT_PROGRESS_COLLECTION = 'AssessmentProgress'
 const REVIEWER_NARRATION_CHUNKS_COLLECTION = 'ReviewerNarrationChunks'
 const MODULE_PROGRESS_COLLECTION = 'ModuleProgress'
+
+export type AdminItemAnalysisMode = 'diagnostic' | 'summative'
+
+export type AdminItemAnalysisRow = {
+  questionId: number
+  module: string
+  bloomLevel: DiagnosticQuestion['bloomLevel']
+  competencyCode: string
+  question: string
+  correctAnswerIndex: number
+  attempts: number
+  correct: number
+  percentCorrect: number
+  discrimination: number | null
+  avgTotalScore: number
+  avgTotalScoreCorrect: number | null
+  avgTotalScoreIncorrect: number | null
+  optionCounts: number[]
+  optionPercents: number[]
+}
 
 const deleteUserSubcollectionDocs = async (uid: string, subcollectionName: string) => {
   const snapshots = await getDocs(collection(db, 'userProfiles', uid, subcollectionName))
@@ -226,4 +252,258 @@ export const resetAdminUserProgress = async (uid: string) => {
 export const deleteAdminUserAccount = async (uid: string) => {
   await resetAdminUserProgress(uid)
   await deleteDoc(doc(db, 'userProfiles', uid))
+}
+
+const computeDiscrimination = ({
+  attempts,
+  correct,
+  sumTotalScore,
+  sumTotalScoreSq,
+  sumTotalScoreCorrect,
+  sumTotalScoreIncorrect,
+}: {
+  attempts: number
+  correct: number
+  sumTotalScore: number
+  sumTotalScoreSq: number
+  sumTotalScoreCorrect: number
+  sumTotalScoreIncorrect: number
+}) => {
+  if (attempts < 3) {
+    return null
+  }
+
+  const incorrect = attempts - correct
+  if (correct <= 0 || incorrect <= 0) {
+    return null
+  }
+
+  const mean = sumTotalScore / attempts
+  const variance = sumTotalScoreSq / attempts - mean * mean
+  const stdDev = Math.sqrt(Math.max(variance, 0))
+
+  if (!Number.isFinite(stdDev) || stdDev === 0) {
+    return null
+  }
+
+  const p = correct / attempts
+  const q = 1 - p
+  const meanCorrect = sumTotalScoreCorrect / correct
+  const meanIncorrect = sumTotalScoreIncorrect / incorrect
+
+  const discrimination = ((meanCorrect - meanIncorrect) / stdDev) * Math.sqrt(p * q)
+  return Number.isFinite(discrimination) ? roundToOne(discrimination) : null
+}
+
+const toAttemptPayloads = (record: Partial<AssessmentProgressRecord>): Array<{
+  questionIds: number[]
+  selectedAnswers: Record<string, number>
+  percentage: number
+}> => {
+  const recordQuestionIds = Array.isArray(record.questionIds)
+    ? record.questionIds.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    : []
+
+  const recordSelectedAnswers =
+    record.selectedAnswers && typeof record.selectedAnswers === 'object'
+      ? (record.selectedAnswers as Record<string, number>)
+      : {}
+
+  const recordPercentage = Number(record.percentage)
+
+  const attemptDetails = Array.isArray(record.summativeAttemptDetails)
+    ? (record.summativeAttemptDetails as SummativeAttemptDetail[]).filter((entry) => entry && typeof entry === 'object')
+    : []
+
+  if (attemptDetails.length > 0) {
+    return attemptDetails.map((entry) => ({
+      questionIds: Array.isArray(entry.questionIds)
+        ? entry.questionIds.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+        : [],
+      selectedAnswers: entry.selectedAnswers ?? {},
+      percentage: Number(entry.percentage),
+    }))
+  }
+
+  return [
+    {
+      questionIds: recordQuestionIds,
+      selectedAnswers: recordSelectedAnswers,
+      percentage: recordPercentage,
+    },
+  ]
+}
+
+export const getAdminItemAnalysis = async ({
+  stage,
+  mode,
+}: {
+  stage: LearningStageKey
+  mode: AdminItemAnalysisMode
+}): Promise<AdminItemAnalysisRow[]> => {
+  const config = getLearningStageConfig(stage)
+  const stageAsDiagnostic = stage as unknown as DiagnosticQuestionStage
+
+  const allowedAssessmentKeys =
+    mode === 'diagnostic'
+      ? new Set([config.diagnosticAssessmentKey, ...config.legacyDiagnosticAssessmentKeys])
+      : new Set([config.summativeAssessmentKey])
+
+  const questionById = new Map<number, DiagnosticQuestion>()
+
+  const snapshots = await getDocs(collectionGroup(db, ASSESSMENT_PROGRESS_COLLECTION))
+
+  const agg = new Map<
+    number,
+    {
+      question: DiagnosticQuestion
+      attempts: number
+      correct: number
+      optionCounts: number[]
+      sumTotalScore: number
+      sumTotalScoreSq: number
+      sumTotalScoreCorrect: number
+      sumTotalScoreIncorrect: number
+    }
+  >()
+
+  const ensureQuestion = (questionId: number) => {
+    const existing = questionById.get(questionId)
+    if (existing) {
+      return existing
+    }
+
+    const resolved = getDiagnosticQuestionsByIdsForStage([questionId], stageAsDiagnostic)[0]
+    if (resolved) {
+      questionById.set(resolved.id, resolved)
+      return resolved
+    }
+
+    return null
+  }
+
+  snapshots.forEach((entry) => {
+    const record = entry.data() as Partial<AssessmentProgressRecord>
+    const assessmentKey = String(record.assessmentKey ?? entry.id ?? '')
+
+    if (!allowedAssessmentKeys.has(assessmentKey)) {
+      return
+    }
+
+    const isSubmitted = record.isSubmitted === true || record.isFinished === true
+    if (!isSubmitted) {
+      return
+    }
+
+    const attemptPayloads = toAttemptPayloads(record).filter((payload) => payload.questionIds.length > 0)
+
+    for (const attempt of attemptPayloads) {
+      const attemptPercentage = Number(attempt.percentage)
+      if (!Number.isFinite(attemptPercentage)) {
+        continue
+      }
+
+      const selectedAnswersNumeric = Object.fromEntries(
+        Object.entries(attempt.selectedAnswers ?? {}).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),
+      ) as Record<number, number>
+
+      const normalizedSelectedAnswers = normalizeSelectedAnswersForStage(selectedAnswersNumeric, stageAsDiagnostic)
+      const resolvedQuestions = getDiagnosticQuestionsByIdsForStage(attempt.questionIds, stageAsDiagnostic)
+
+      for (const question of resolvedQuestions) {
+        const selectedIndex = normalizedSelectedAnswers[question.id]
+        if (selectedIndex === undefined || !Number.isFinite(selectedIndex)) {
+          continue
+        }
+
+        const resolvedQuestion = ensureQuestion(question.id)
+        if (!resolvedQuestion) {
+          continue
+        }
+
+        const state =
+          agg.get(resolvedQuestion.id) ??
+          ({
+            question: resolvedQuestion,
+            attempts: 0,
+            correct: 0,
+            optionCounts: new Array(resolvedQuestion.options.length).fill(0),
+            sumTotalScore: 0,
+            sumTotalScoreSq: 0,
+            sumTotalScoreCorrect: 0,
+            sumTotalScoreIncorrect: 0,
+          } as {
+            question: DiagnosticQuestion
+            attempts: number
+            correct: number
+            optionCounts: number[]
+            sumTotalScore: number
+            sumTotalScoreSq: number
+            sumTotalScoreCorrect: number
+            sumTotalScoreIncorrect: number
+          })
+
+        const isCorrect = selectedIndex === resolvedQuestion.correctAnswerIndex
+        state.attempts += 1
+        state.correct += isCorrect ? 1 : 0
+        state.sumTotalScore += attemptPercentage
+        state.sumTotalScoreSq += attemptPercentage * attemptPercentage
+        if (isCorrect) {
+          state.sumTotalScoreCorrect += attemptPercentage
+        } else {
+          state.sumTotalScoreIncorrect += attemptPercentage
+        }
+
+        if (selectedIndex >= 0 && selectedIndex < state.optionCounts.length) {
+          state.optionCounts[selectedIndex] += 1
+        }
+
+        agg.set(resolvedQuestion.id, state)
+      }
+    }
+  })
+
+  const rows: AdminItemAnalysisRow[] = Array.from(agg.values()).map((entry) => {
+    const percentCorrectRaw = entry.attempts > 0 ? (entry.correct / entry.attempts) * 100 : 0
+    const avgTotalScore = entry.attempts > 0 ? entry.sumTotalScore / entry.attempts : 0
+    const incorrect = entry.attempts - entry.correct
+
+    const avgTotalScoreCorrect = entry.correct > 0 ? entry.sumTotalScoreCorrect / entry.correct : null
+    const avgTotalScoreIncorrect = incorrect > 0 ? entry.sumTotalScoreIncorrect / incorrect : null
+
+    const optionPercents = entry.optionCounts.map((count) => (entry.attempts > 0 ? roundToOne((count / entry.attempts) * 100) : 0))
+
+    return {
+      questionId: entry.question.id,
+      module: entry.question.module,
+      bloomLevel: entry.question.bloomLevel,
+      competencyCode: entry.question.competencyCode,
+      question: entry.question.question,
+      correctAnswerIndex: entry.question.correctAnswerIndex,
+      attempts: entry.attempts,
+      correct: entry.correct,
+      percentCorrect: roundToOne(percentCorrectRaw),
+      discrimination: computeDiscrimination({
+        attempts: entry.attempts,
+        correct: entry.correct,
+        sumTotalScore: entry.sumTotalScore,
+        sumTotalScoreSq: entry.sumTotalScoreSq,
+        sumTotalScoreCorrect: entry.sumTotalScoreCorrect,
+        sumTotalScoreIncorrect: entry.sumTotalScoreIncorrect,
+      }),
+      avgTotalScore: roundToOne(avgTotalScore),
+      avgTotalScoreCorrect: avgTotalScoreCorrect === null ? null : roundToOne(avgTotalScoreCorrect),
+      avgTotalScoreIncorrect: avgTotalScoreIncorrect === null ? null : roundToOne(avgTotalScoreIncorrect),
+      optionCounts: entry.optionCounts,
+      optionPercents,
+    }
+  })
+
+  return rows.sort((first, second) => {
+    if (first.module !== second.module) {
+      return first.module.localeCompare(second.module)
+    }
+
+    return first.questionId - second.questionId
+  })
 }
