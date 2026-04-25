@@ -178,15 +178,17 @@ const AdminItemAnalysisPage = () => {
     return next
   }, [filteredRows, sortBy])
 
-  const surface = isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
+  const surface = isBrightMode
+    ? 'border-slate-200/80 bg-white shadow-sm shadow-slate-200/40'
+    : 'border-slate-700/60 bg-slate-900/70'
 
   return (
-    <main className={`min-h-screen p-8 ${isBrightMode ? 'bg-[#fffdf7]' : 'bg-[#0f172a]'}`}>
+    <main className={`min-h-screen p-8 ${isBrightMode ? 'bg-linear-to-b from-[#fffdf7] via-white to-[#f3f7ff]' : 'bg-[#0f172a]'}`}>
       <section className="mx-auto w-full max-w-6xl space-y-6">
         <header
           className={`rounded-3xl border p-7 ${
             isBrightMode
-              ? 'border-gray-200 bg-linear-to-r from-white via-blue-50 to-cyan-50'
+              ? 'border-slate-200/80 bg-linear-to-r from-white via-indigo-50 to-sky-50'
               : 'border-slate-700/60 bg-linear-to-r from-slate-900 via-slate-900 to-blue-950/40'
           }`}
         >
@@ -195,8 +197,8 @@ const AdminItemAnalysisPage = () => {
               <BarChart3 size={22} />
             </div>
             <div className="min-w-[220px]">
-              <h1 className={`text-2xl font-bold tracking-tight ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Item Analysis</h1>
-              <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+              <h1 className={`text-2xl font-bold tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-slate-100'}`}>Item Analysis</h1>
+              <p className={`mt-1 text-sm ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
                 Question difficulty, discrimination, and distractor selection.
               </p>
             </div>
@@ -205,7 +207,9 @@ const AdminItemAnalysisPage = () => {
               type="button"
               onClick={() => navigate(ROUTE_PATHS.admin.home)}
               className={`ml-auto inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                isBrightMode ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50' : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+                isBrightMode
+                  ? 'border-slate-300/80 bg-white text-slate-800 hover:bg-slate-50'
+                  : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
               }`}
             >
               <ArrowLeft size={16} />
@@ -217,7 +221,9 @@ const AdminItemAnalysisPage = () => {
               onClick={() => void load(true)}
               disabled={isRefreshing}
               className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                isBrightMode ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50' : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+                isBrightMode
+                  ? 'border-slate-300/80 bg-white text-slate-800 hover:bg-slate-50'
+                  : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
               } ${isRefreshing ? 'cursor-not-allowed opacity-70' : ''}`}
             >
               <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
@@ -246,12 +252,14 @@ const AdminItemAnalysisPage = () => {
         <article className={`rounded-2xl border p-5 ${surface}`}>
           <div className="grid gap-4 md:grid-cols-4">
             <label className="block space-y-1.5">
-              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Stage</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Stage</span>
               <select
                 value={stage}
                 onChange={(event) => setStage(event.target.value as LearningStageKey)}
                 className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isBrightMode ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500' : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
+                  isBrightMode
+                    ? 'border-slate-300/80 bg-white text-slate-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+                    : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
                 }`}
               >
                 {STAGES.map((entry) => (
@@ -263,12 +271,14 @@ const AdminItemAnalysisPage = () => {
             </label>
 
             <label className="block space-y-1.5">
-              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Assessment</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Assessment</span>
               <select
                 value={mode}
                 onChange={(event) => setMode(event.target.value as AdminItemAnalysisMode)}
                 className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isBrightMode ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500' : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
+                  isBrightMode
+                    ? 'border-slate-300/80 bg-white text-slate-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+                    : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
                 }`}
               >
                 {MODES.map((entry) => (
@@ -280,7 +290,7 @@ const AdminItemAnalysisPage = () => {
             </label>
 
             <label className="block space-y-1.5">
-              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Min attempts</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Min attempts</span>
               <input
                 type="number"
                 min={0}
@@ -290,18 +300,22 @@ const AdminItemAnalysisPage = () => {
                   setMinAttempts(Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0)
                 }}
                 className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isBrightMode ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500' : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
+                  isBrightMode
+                    ? 'border-slate-300/80 bg-white text-slate-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+                    : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
                 }`}
               />
             </label>
 
             <label className="block space-y-1.5">
-              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Sort</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Sort</span>
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value as typeof sortBy)}
                 className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isBrightMode ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500' : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
+                  isBrightMode
+                    ? 'border-slate-300/80 bg-white text-slate-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+                    : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
                 }`}
               >
                 <option value="module">Module</option>
@@ -315,18 +329,20 @@ const AdminItemAnalysisPage = () => {
 
           <div className="mt-4">
             <label className="block space-y-1.5">
-              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Search</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>Search</span>
               <input
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Module, competency code, question text, bloom, ID (#29), or 'revise'..."
                 className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isBrightMode ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500' : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
+                  isBrightMode
+                    ? 'border-slate-300/80 bg-white text-slate-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+                    : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
                 }`}
               />
             </label>
-            <p className={`mt-2 text-[11px] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+            <p className={`mt-2 text-[11px] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>
               Tip: type <span className="font-semibold">revise</span>, <span className="font-semibold">retain</span>, or an item number like <span className="font-semibold">#29</span>.
             </p>
           </div>
@@ -334,14 +350,14 @@ const AdminItemAnalysisPage = () => {
 
         <article className={`rounded-2xl border p-5 ${surface}`}>
           {isLoading ? (
-            <p className={`text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>Loading item analysis...</p>
+            <p className={`text-sm ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>Loading item analysis...</p>
           ) : sortedRows.length === 0 ? (
-            <p className={`text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>No rows match the current filters.</p>
+            <p className={`text-sm ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>No rows match the current filters.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr className={`${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                  <tr className={`${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Item</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Module</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Attempts</th>
@@ -368,32 +384,32 @@ const AdminItemAnalysisPage = () => {
                             ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                             : 'border-emerald-500/40 bg-emerald-950/30 text-emerald-200'
                           : isBrightMode
-                            ? 'border-gray-200 bg-gray-50 text-gray-700'
+                            ? 'border-slate-200 bg-slate-50 text-slate-700'
                             : 'border-slate-600/60 bg-slate-900/40 text-slate-200'
 
                     return (
                       <tr
                         key={row.questionId}
-                        className={`${isBrightMode ? 'border-t border-gray-200' : 'border-t border-slate-700/60'} ${
-                          decision.shouldRevise ? (isBrightMode ? 'bg-red-50/40' : 'bg-red-950/15') : ''
+                        className={`${isBrightMode ? 'border-t border-slate-200' : 'border-t border-slate-700/60'} ${
+                          decision.shouldRevise ? (isBrightMode ? 'bg-rose-50/60' : 'bg-red-950/15') : isBrightMode ? 'hover:bg-slate-50/60' : 'hover:bg-slate-900/30'
                         }`}
                       >
-                        <td className={`py-3 pr-4 font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>#{row.questionId}</td>
-                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
+                        <td className={`py-3 pr-4 font-semibold ${isBrightMode ? 'text-slate-900' : 'text-slate-100'}`}>#{row.questionId}</td>
+                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-slate-800' : 'text-slate-200'}`}>
                           <div className="font-semibold">{row.module}</div>
-                          <div className={`mt-0.5 text-[11px] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                          <div className={`mt-0.5 text-[11px] ${isBrightMode ? 'text-slate-500' : 'text-slate-400'}`}>
                             {row.competencyCode} · {row.bloomLevel}
                           </div>
                         </td>
-                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>{row.attempts}</td>
-                        <td className={`py-3 pr-4 font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{row.percentCorrect}%</td>
-                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>{row.discrimination === null ? '-' : row.discrimination}</td>
-                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
+                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-slate-800' : 'text-slate-200'}`}>{row.attempts}</td>
+                        <td className={`py-3 pr-4 font-semibold ${isBrightMode ? 'text-slate-900' : 'text-slate-100'}`}>{row.percentCorrect}%</td>
+                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-slate-800' : 'text-slate-200'}`}>{row.discrimination === null ? '-' : row.discrimination}</td>
+                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-slate-800' : 'text-slate-200'}`}>
                           <div className={`inline-flex items-center rounded-full border px-3 py-1 text-[12px] font-bold ${decisionTone}`}>{decision.label}</div>
-                          <div className={`mt-1 text-[11px] ${isBrightMode ? 'text-gray-600' : 'text-slate-400'}`}>{decision.shouldRevise ? 'Item to revise' : 'OK'}</div>
+                          <div className={`mt-1 text-[11px] ${isBrightMode ? 'text-slate-600' : 'text-slate-400'}`}>{decision.shouldRevise ? 'Item to revise' : 'OK'}</div>
                         </td>
                         <td className={`py-3 pr-4 font-black ${isBrightMode ? 'text-emerald-700' : 'text-emerald-300'}`}>{correctLetter}</td>
-                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
+                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-slate-800' : 'text-slate-200'}`}>
                           <div className="flex flex-wrap gap-x-3 gap-y-1">
                             {row.optionPercents.map((percent, index) => {
                               const letter = formatLetter(index)
@@ -408,7 +424,7 @@ const AdminItemAnalysisPage = () => {
                                         ? 'font-black text-emerald-700'
                                         : 'font-black text-emerald-300'
                                       : isBrightMode
-                                        ? 'text-gray-700'
+                                        ? 'text-slate-700'
                                         : 'text-slate-200'
                                   }`}
                                 >
@@ -418,7 +434,7 @@ const AdminItemAnalysisPage = () => {
                             })}
                           </div>
                         </td>
-                        <td className={`py-3 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
+                        <td className={`py-3 ${isBrightMode ? 'text-slate-800' : 'text-slate-200'}`}>
                           <p className="max-w-[520px] leading-snug">{row.question}</p>
                         </td>
                       </tr>
