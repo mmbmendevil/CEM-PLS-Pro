@@ -20,6 +20,41 @@ const MODES: Array<{ key: AdminItemAnalysisMode; label: string }> = [
 
 const formatLetter = (index: number) => String.fromCharCode(65 + index)
 
+type ItemDecision = {
+  status: 'Retain' | 'Revise' | 'Needs Data'
+  shouldRevise: boolean
+  label: string
+}
+
+const getDifficultyBucket = (p: number) => {
+  if (p < 0.3) return 'difficult'
+  if (p > 0.8) return 'easy'
+  return 'moderate'
+}
+
+const getItemDecision = ({ percentCorrect, discrimination }: Pick<AdminItemAnalysisRow, 'percentCorrect' | 'discrimination'>): ItemDecision => {
+  const p = percentCorrect / 100
+  const bucket = getDifficultyBucket(p)
+
+  if (discrimination === null) {
+    return { status: 'Needs Data', shouldRevise: false, label: 'Needs more data' }
+  }
+
+  if (discrimination < 0) {
+    return { status: 'Revise', shouldRevise: true, label: 'Revise (ineffective item)' }
+  }
+
+  if (discrimination < 0.2) {
+    return { status: 'Revise', shouldRevise: true, label: 'Revise (low discrimination)' }
+  }
+
+  if (bucket === 'moderate') {
+    return { status: 'Retain', shouldRevise: false, label: 'Retain (effective item)' }
+  }
+
+  return { status: 'Retain', shouldRevise: false, label: `Retain (effective but ${bucket})` }
+}
+
 const AdminItemAnalysisPage = () => {
   const navigate = useNavigate()
   const { isBrightMode } = useBrightness()
@@ -28,7 +63,7 @@ const AdminItemAnalysisPage = () => {
   const [mode, setMode] = useState<AdminItemAnalysisMode>('summative')
   const [minAttempts, setMinAttempts] = useState(5)
   const [query, setQuery] = useState('')
-  const [sortBy, setSortBy] = useState<'module' | 'difficulty' | 'discrimination' | 'attempts'>('module')
+  const [sortBy, setSortBy] = useState<'module' | 'difficulty' | 'discrimination' | 'attempts' | 'decision'>('module')
   const [rows, setRows] = useState<AdminItemAnalysisRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -67,21 +102,36 @@ const AdminItemAnalysisPage = () => {
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
+    const cleanedQuery = normalizedQuery.replace(/^item\s+/i, '').replace(/^#/, '').trim()
+    const queryDigits = cleanedQuery.match(/\d+/)?.[0] ?? ''
 
     return rows.filter((row) => {
       if (row.attempts < minAttempts) {
         return false
       }
 
-      if (!normalizedQuery) {
+      if (!cleanedQuery) {
+        return true
+      }
+
+      const decision = getItemDecision(row)
+      if (cleanedQuery.includes('revise') && !decision.shouldRevise) {
+        return false
+      }
+      if (cleanedQuery.includes('retain') && decision.shouldRevise) {
+        return false
+      }
+
+      if (queryDigits && Number.isFinite(Number(queryDigits)) && row.questionId === Number(queryDigits)) {
         return true
       }
 
       return (
-        row.module.toLowerCase().includes(normalizedQuery) ||
-        row.question.toLowerCase().includes(normalizedQuery) ||
-        row.competencyCode.toLowerCase().includes(normalizedQuery) ||
-        String(row.questionId).includes(normalizedQuery)
+        row.module.toLowerCase().includes(cleanedQuery) ||
+        row.question.toLowerCase().includes(cleanedQuery) ||
+        row.competencyCode.toLowerCase().includes(cleanedQuery) ||
+        row.bloomLevel.toLowerCase().includes(cleanedQuery) ||
+        String(row.questionId).includes(cleanedQuery)
       )
     })
   }, [minAttempts, query, rows])
@@ -102,6 +152,20 @@ const AdminItemAnalysisPage = () => {
         const firstDisc = first.discrimination ?? -999
         const secondDisc = second.discrimination ?? -999
         return secondDisc - firstDisc
+      }
+
+      if (sortBy === 'decision') {
+        const firstDecision = getItemDecision(first)
+        const secondDecision = getItemDecision(second)
+        if (firstDecision.shouldRevise !== secondDecision.shouldRevise) {
+          return firstDecision.shouldRevise ? -1 : 1
+        }
+
+        const firstDisc = first.discrimination ?? -999
+        const secondDisc = second.discrimination ?? -999
+        if (firstDisc !== secondDisc) {
+          return firstDisc - secondDisc
+        }
       }
 
       if (first.module !== second.module) {
@@ -154,7 +218,7 @@ const AdminItemAnalysisPage = () => {
               disabled={isRefreshing}
               className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
                 isBrightMode ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50' : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
-              } ${isRefreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
+              } ${isRefreshing ? 'cursor-not-allowed opacity-70' : ''}`}
             >
               <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
               Refresh
@@ -244,6 +308,7 @@ const AdminItemAnalysisPage = () => {
                 <option value="attempts">Attempts</option>
                 <option value="difficulty">Difficulty (% correct)</option>
                 <option value="discrimination">Discrimination</option>
+                <option value="decision">Decision (revise first)</option>
               </select>
             </label>
           </div>
@@ -255,12 +320,15 @@ const AdminItemAnalysisPage = () => {
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Module, competency code, question text, or ID..."
+                placeholder="Module, competency code, question text, bloom, ID (#29), or 'revise'..."
                 className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${
                   isBrightMode ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500' : 'border-slate-600 bg-slate-950/60 text-slate-100 focus:border-blue-400'
                 }`}
               />
             </label>
+            <p className={`mt-2 text-[11px] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+              Tip: type <span className="font-semibold">revise</span>, <span className="font-semibold">retain</span>, or an item number like <span className="font-semibold">#29</span>.
+            </p>
           </div>
         </article>
 
@@ -268,9 +336,7 @@ const AdminItemAnalysisPage = () => {
           {isLoading ? (
             <p className={`text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>Loading item analysis...</p>
           ) : sortedRows.length === 0 ? (
-            <p className={`text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-              No rows match the current filters.
-            </p>
+            <p className={`text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>No rows match the current filters.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-sm">
@@ -279,8 +345,9 @@ const AdminItemAnalysisPage = () => {
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Item</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Module</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Attempts</th>
-                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">% Correct</th>
-                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Disc.</th>
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Difficulty (p)</th>
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Discrimination (D)</th>
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Decision</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Key</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-[0.18em]">Distractors</th>
                     <th className="py-2 text-[11px] font-black uppercase tracking-[0.18em]">Question</th>
@@ -289,20 +356,28 @@ const AdminItemAnalysisPage = () => {
                 <tbody>
                   {sortedRows.map((row) => {
                     const correctLetter = formatLetter(row.correctAnswerIndex)
-                    const distractorSummary = row.optionPercents
-                      .map((percent, index) => ({
-                        index,
-                        percent,
-                        isCorrect: index === row.correctAnswerIndex,
-                      }))
-                      .filter((entry) => !entry.isCorrect)
-                      .sort((a, b) => b.percent - a.percent)
-                      .slice(0, 2)
-                      .map((entry) => `${formatLetter(entry.index)} ${entry.percent}%`)
-                      .join(' · ')
+                    const decision = getItemDecision(row)
+
+                    const decisionTone =
+                      decision.status === 'Revise'
+                        ? isBrightMode
+                          ? 'border-red-200 bg-red-50 text-red-800'
+                          : 'border-red-500/40 bg-red-950/30 text-red-200'
+                        : decision.status === 'Retain'
+                          ? isBrightMode
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            : 'border-emerald-500/40 bg-emerald-950/30 text-emerald-200'
+                          : isBrightMode
+                            ? 'border-gray-200 bg-gray-50 text-gray-700'
+                            : 'border-slate-600/60 bg-slate-900/40 text-slate-200'
 
                     return (
-                      <tr key={row.questionId} className={`${isBrightMode ? 'border-t border-gray-200' : 'border-t border-slate-700/60'}`}>
+                      <tr
+                        key={row.questionId}
+                        className={`${isBrightMode ? 'border-t border-gray-200' : 'border-t border-slate-700/60'} ${
+                          decision.shouldRevise ? (isBrightMode ? 'bg-red-50/40' : 'bg-red-950/15') : ''
+                        }`}
+                      >
                         <td className={`py-3 pr-4 font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>#{row.questionId}</td>
                         <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
                           <div className="font-semibold">{row.module}</div>
@@ -312,12 +387,36 @@ const AdminItemAnalysisPage = () => {
                         </td>
                         <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>{row.attempts}</td>
                         <td className={`py-3 pr-4 font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{row.percentCorrect}%</td>
+                        <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>{row.discrimination === null ? '-' : row.discrimination}</td>
                         <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
-                          {row.discrimination === null ? '-' : row.discrimination}
+                          <div className={`inline-flex items-center rounded-full border px-3 py-1 text-[12px] font-bold ${decisionTone}`}>{decision.label}</div>
+                          <div className={`mt-1 text-[11px] ${isBrightMode ? 'text-gray-600' : 'text-slate-400'}`}>{decision.shouldRevise ? 'Item to revise' : 'OK'}</div>
                         </td>
                         <td className={`py-3 pr-4 font-black ${isBrightMode ? 'text-emerald-700' : 'text-emerald-300'}`}>{correctLetter}</td>
                         <td className={`py-3 pr-4 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
-                          {distractorSummary || '-'}
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            {row.optionPercents.map((percent, index) => {
+                              const letter = formatLetter(index)
+                              const isCorrect = index === row.correctAnswerIndex
+
+                              return (
+                                <span
+                                  key={`${row.questionId}-${index}`}
+                                  className={`text-[12px] ${
+                                    isCorrect
+                                      ? isBrightMode
+                                        ? 'font-black text-emerald-700'
+                                        : 'font-black text-emerald-300'
+                                      : isBrightMode
+                                        ? 'text-gray-700'
+                                        : 'text-slate-200'
+                                  }`}
+                                >
+                                  {letter} {percent}%
+                                </span>
+                              )
+                            })}
+                          </div>
                         </td>
                         <td className={`py-3 ${isBrightMode ? 'text-gray-800' : 'text-slate-200'}`}>
                           <p className="max-w-[520px] leading-snug">{row.question}</p>
