@@ -9,7 +9,6 @@ import {
   Maximize,
   Pause,
   Play,
-  Settings,
   SkipBack,
   SkipForward,
   Volume2,
@@ -122,6 +121,7 @@ const AudiobookReviewPage = () => {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [selectedVoiceURI, setSelectedVoiceURI] = useState('')
   const [speechRate, setSpeechRate] = useState(0.92)
+  const [isFocusMode, setIsFocusMode] = useState(false)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   useEffect(() => {
@@ -183,6 +183,14 @@ const AudiobookReviewPage = () => {
   const redirectNotice = (location.state as { redirectNotice?: string } | null)?.redirectNotice ?? ''
   const chapters = useMemo(() => buildChaptersFromScript(reviewerOutput), [reviewerOutput])
   const hasScript = reviewerOutput && reviewerOutput !== 'FLASHCARD_READY'
+  const totalMinutes = useMemo(() => {
+    return chapters.reduce((sum, chapter) => {
+      const minutesRaw = chapter.duration.split(':')[0] ?? ''
+      const minutes = Number.parseInt(minutesRaw, 10)
+      return sum + (Number.isFinite(minutes) ? minutes : 0)
+    }, 0)
+  }, [chapters])
+  const totalDurationLabel = totalMinutes > 0 ? `${totalMinutes}:00` : '0:00'
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -317,7 +325,8 @@ const AudiobookReviewPage = () => {
   return (
     <section className={`relative overflow-hidden rounded-3xl border p-6 md:p-10 ${surface}`}>
       <div className="relative max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center gap-4 text-slate-500">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4 text-slate-500">
           <Link
             to={ROUTE_PATHS.dashboard.studyPlan}
             className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors ${isBrightMode ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}
@@ -328,83 +337,156 @@ const AudiobookReviewPage = () => {
             <span className={`text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'text-cyan-700' : 'text-cyan-300'}`}>Audiobook Review</span>
             <h2 className={`text-2xl font-black italic tracking-tighter uppercase ${heading}`}>Narration Script Player</h2>
           </div>
+          </div>
+
+          {hasScript ? (
+            <div
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'border-slate-200 bg-white/80 text-slate-600' : 'border-white/10 bg-white/5 text-slate-300'}`}
+            >
+              <span className="tabular-nums">{Math.min(chapters.length, currentChapterIndex + 1)}</span>
+              <span className={isBrightMode ? 'text-slate-300' : 'text-slate-500'}>/</span>
+              <span className="tabular-nums">{chapters.length}</span>
+              <span className={isBrightMode ? 'text-slate-300' : 'text-slate-500'}>•</span>
+              <span>Progress</span>
+              <span className="tabular-nums">{progressPercent}%</span>
+            </div>
+          ) : null}
         </div>
 
-        <div className={`rounded-xl border px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 ${isBrightMode ? 'border-cyan-200 bg-cyan-50/70 text-cyan-800' : 'border-cyan-800/60 bg-cyan-900/20 text-cyan-200'}`}>
-          <span className="text-xs font-black uppercase tracking-widest">Narration Voice</span>
-          <select
-            value={selectedVoiceURI}
-            onChange={(event) => setSelectedVoiceURI(event.target.value)}
-            className={`rounded-lg border px-3 py-1.5 text-sm outline-none ${isBrightMode ? 'border-cyan-300 bg-white text-slate-900' : 'border-cyan-700 bg-[#0b1320] text-slate-100'}`}
-          >
-            {availableVoices.map((voice) => (
-              <option key={voice.voiceURI} value={voice.voiceURI}>
-                {voice.name} ({voice.lang})
-              </option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2 md:ml-auto">
-            <span className="text-xs font-black uppercase tracking-widest">Speed</span>
-            <button
-              type="button"
-              onClick={() => setSpeechRate((value) => Math.max(0.75, Number((value - 0.05).toFixed(2))))}
-              className={`h-8 w-8 rounded-md font-black ${isBrightMode ? 'bg-white border border-cyan-300 text-cyan-700' : 'bg-[#0b1320] border border-cyan-700 text-cyan-200'}`}
-            >
-              -
-            </button>
-            <span className="text-sm font-black min-w-10 text-center">{speechRate.toFixed(2)}x</span>
-            <button
-              type="button"
-              onClick={() => setSpeechRate((value) => Math.min(1.2, Number((value + 0.05).toFixed(2))))}
-              className={`h-8 w-8 rounded-md font-black ${isBrightMode ? 'bg-white border border-cyan-300 text-cyan-700' : 'bg-[#0b1320] border border-cyan-700 text-cyan-200'}`}
-            >
-              +
-            </button>
+        <div
+          className={`rounded-2xl border px-4 py-4 md:px-5 md:py-4 ${isBrightMode ? 'border-cyan-200 bg-cyan-50/70 text-cyan-900' : 'border-cyan-800/60 bg-cyan-900/20 text-cyan-100'}`}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-center">
+            <div className="md:col-span-8">
+              <label className="block text-[10px] font-black uppercase tracking-widest opacity-80" htmlFor="reviewerVoice">
+                Narration Voice
+              </label>
+              <select
+                id="reviewerVoice"
+                value={selectedVoiceURI}
+                onChange={(event) => setSelectedVoiceURI(event.target.value)}
+                className={`mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none transition-colors ${isBrightMode ? 'border-cyan-300 bg-white text-slate-900 focus:border-blue-400' : 'border-cyan-700 bg-[#0b1320] text-slate-100 focus:border-blue-500'}`}
+              >
+                {availableVoices.map((voice) => (
+                  <option key={voice.voiceURI} value={voice.voiceURI}>
+                    {voice.name} ({voice.lang})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-4 md:justify-self-end">
+              <div className="flex items-center justify-between md:flex-col md:items-end md:gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Speed</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Decrease narration speed"
+                    onClick={() => setSpeechRate((value) => Math.max(0.75, Number((value - 0.05).toFixed(2))))}
+                    className={`h-10 w-10 rounded-xl font-black transition-colors ${isBrightMode ? 'bg-white border border-cyan-300 text-cyan-800 hover:bg-cyan-50' : 'bg-[#0b1320] border border-cyan-700 text-cyan-100 hover:bg-white/5'}`}
+                  >
+                    -
+                  </button>
+                  <span className="text-sm font-black min-w-14 text-center tabular-nums">{speechRate.toFixed(2)}x</span>
+                  <button
+                    type="button"
+                    aria-label="Increase narration speed"
+                    onClick={() => setSpeechRate((value) => Math.min(1.2, Number((value + 0.05).toFixed(2))))}
+                    className={`h-10 w-10 rounded-xl font-black transition-colors ${isBrightMode ? 'bg-white border border-cyan-300 text-cyan-800 hover:bg-cyan-50' : 'bg-[#0b1320] border border-cyan-700 text-cyan-100 hover:bg-white/5'}`}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {hasScript ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 space-y-6">
-              <div className={`relative aspect-video rounded-[2.5rem] overflow-hidden border group shadow-2xl ${isBrightMode ? 'bg-white border-slate-200 shadow-cyan-600/10' : 'bg-[#0A0A0A] border-white/5 shadow-blue-600/5'}`}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center space-y-4 px-6">
+          <div className={isFocusMode ? 'grid grid-cols-1 gap-8' : 'grid grid-cols-1 lg:grid-cols-12 gap-8'}>
+            <div className={isFocusMode ? 'space-y-6' : 'lg:col-span-8 space-y-6'}>
+              <div
+                className={`relative aspect-video rounded-[2.5rem] overflow-hidden border shadow-2xl ${isBrightMode ? 'bg-slate-950 border-slate-200 shadow-cyan-600/10' : 'bg-[#0A0A0A] border-white/5 shadow-blue-600/5'}`}
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),_transparent_55%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.18),_transparent_60%)]" />
+
+                <div className="relative h-full flex flex-col">
+                  <div className="px-6 pt-6 md:px-8 md:pt-8 flex items-start justify-between gap-6">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/70">Now Playing</p>
+                      <h3 className="mt-2 text-lg md:text-xl font-black tracking-tight text-white truncate">
+                        {currentChapter?.title ?? 'No chapter selected'}
+                      </h3>
+                      <p className="mt-1 text-xs font-semibold text-white/70">
+                        Chapter {chapters.length > 0 ? currentChapterIndex + 1 : 0} of {chapters.length} •{' '}
+                        {currentChapter?.duration ?? '0:00'} • ~{totalDurationLabel}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      aria-pressed={isFocusMode}
+                      onClick={() => setIsFocusMode((value) => !value)}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10"
+                      aria-label={isFocusMode ? 'Exit focus mode' : 'Enter focus mode'}
+                    >
+                      <Maximize size={18} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 flex items-center justify-center">
                     <motion.button
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.06 }}
+                      whileTap={{ scale: 0.94 }}
                       onClick={() => setIsPlaying((current) => !current)}
-                      className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/40"
+                      className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/40 focus:outline-none focus:ring-2 focus:ring-white/60"
+                      aria-label={isPlaying ? 'Pause narration' : 'Play narration'}
                     >
                       {isPlaying ? <Pause fill="white" /> : <Play fill="white" className="ml-1" />}
                     </motion.button>
-                    <p className={`text-xs font-bold uppercase tracking-widest ${isBrightMode ? 'text-slate-600' : 'text-slate-500'}`}>
-                      Currently Viewing: {currentChapter?.title ?? 'No chapter selected'}
-                    </p>
                   </div>
-                </div>
 
-                <div className="absolute bottom-0 inset-x-0 p-6 md:p-8 bg-linear-to-t from-black/80 to-transparent">
-                  <div className="space-y-4">
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]" style={{ width: `${mediaProgressPercent}%` }} />
-                    </div>
+                  <div className="px-6 pb-6 md:px-8 md:pb-8">
+                    <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 backdrop-blur-sm">
+                      <div className="space-y-4">
+                        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-300"
+                            style={{ width: `${mediaProgressPercent}%` }}
+                          />
+                        </div>
 
-                    <div className="flex items-center justify-between text-white">
-                      <div className="flex items-center gap-4 md:gap-6">
-                        <button type="button" onClick={handlePreviousChapter} disabled={!canGoPrevious} className="disabled:opacity-40">
-                          <SkipBack size={20} className="hover:text-blue-500" />
-                        </button>
-                        <button type="button" onClick={handleNextChapter} disabled={!canGoNext} className="disabled:opacity-40">
-                          <SkipForward size={20} className="hover:text-blue-500" />
-                        </button>
-                        <Volume2 size={20} className="hover:text-blue-500" />
-                        <span className="text-xs font-mono text-slate-300">
-                          {`${currentChapter?.duration ?? '0:00'} / ${(chapters.length * 3).toString()}:00`}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 md:gap-6">
-                        <Settings size={20} className="hover:text-blue-500" />
-                        <Maximize size={20} className="hover:text-blue-500" />
+                        <div className="flex items-center justify-between text-white">
+                          <div className="flex items-center gap-3 md:gap-4">
+                            <button
+                              type="button"
+                              onClick={handlePreviousChapter}
+                              disabled={!canGoPrevious}
+                              className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10 disabled:opacity-40"
+                              aria-label="Previous chapter"
+                            >
+                              <SkipBack size={18} className="mx-auto" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleNextChapter}
+                              disabled={!canGoNext}
+                              className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10 disabled:opacity-40"
+                              aria-label="Next chapter"
+                            >
+                              <SkipForward size={18} className="mx-auto" />
+                            </button>
+                            <div className="hidden sm:flex items-center gap-2 text-white/70">
+                              <Volume2 size={16} />
+                              <span className="text-xs font-mono tabular-nums">
+                                {currentChapter?.duration ?? '0:00'} / {totalDurationLabel}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/60">
+                            {isPlaying ? 'Playing' : 'Paused'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -412,25 +494,43 @@ const AudiobookReviewPage = () => {
               </div>
 
               <div className={`border rounded-4xl p-8 ${isBrightMode ? 'bg-white border-slate-200' : 'bg-[#0A0A0A] border-white/5'}`}>
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
+                  <div className="flex items-center gap-3">
                   <span className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'bg-blue-50 text-blue-600' : 'bg-blue-600/10 text-blue-400'}`}>
                     Computer Architecture
                   </span>
                   <span className={`text-xs font-bold uppercase ${isBrightMode ? 'text-slate-500' : 'text-slate-500'}`}>AI Narrator</span>
+                  </div>
+                  <div className={`text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Transcript
+                  </div>
                 </div>
-                <p className={`text-sm md:text-base leading-relaxed whitespace-pre-wrap ${muted}`}>
-                  {currentChapter?.content ?? 'No chapter content available.'}
-                </p>
+                <div className={`rounded-3xl border p-5 md:p-6 ${isBrightMode ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-white/5'}`}>
+                  <p className={`text-sm md:text-base leading-relaxed whitespace-pre-wrap ${muted}`}>
+                    {currentChapter?.content ?? 'No chapter content available.'}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-blue-600 rounded-4xl p-8 text-white relative overflow-hidden shadow-lg shadow-blue-600/20">
+            {isFocusMode ? null : (
+              <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6 h-fit">
+                <div className="bg-blue-600 rounded-4xl p-8 text-white relative overflow-hidden shadow-lg shadow-blue-600/20">
                 <div className="relative z-10">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Overall Progress</p>
                   <h3 className="text-4xl font-black italic tracking-tighter mb-4">{progressPercent}%</h3>
                   <div className="h-2 w-full bg-black/20 rounded-full">
                     <div className="h-full bg-white rounded-full shadow-md transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                  <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                    <div className="rounded-2xl bg-white/10 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Chapters</p>
+                      <p className="mt-1 text-base font-black tabular-nums">{chapters.length}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/10 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Approx. Time</p>
+                      <p className="mt-1 text-base font-black tabular-nums">{totalDurationLabel}</p>
+                    </div>
                   </div>
                 </div>
                 <div className="absolute top-[-20%] right-[-10%] opacity-20 rotate-12">
@@ -446,23 +546,23 @@ const AudiobookReviewPage = () => {
                   <h3 className={`text-[10px] font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-500' : 'text-slate-500'}`}>Course Curriculum</h3>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
                   {chapters.map((chapter, index) => {
                     const isActive = index === currentChapterIndex
                     const isCompleted = index < currentChapterIndex
                     const isLocked = index > currentChapterIndex + 2
 
                     return (
-                        <button
-                          key={chapter.id}
-                          type="button"
-                          disabled={isLocked}
-                          onClick={() => {
-                            setCurrentChapterIndex(index)
-                          }}
-                        className={`w-full text-left p-4 rounded-2xl transition-all flex items-center justify-between group ${isActive ? isBrightMode ? 'bg-blue-50 border border-blue-200' : 'bg-blue-600/10 border border-blue-500/30' : isBrightMode ? 'hover:bg-slate-50 border border-transparent' : 'hover:bg-white/5 border border-transparent'} ${isLocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                      <button
+                        key={chapter.id}
+                        type="button"
+                        disabled={isLocked}
+                        onClick={() => {
+                          setCurrentChapterIndex(index)
+                        }}
+                        className={`w-full text-left p-4 rounded-2xl transition-all flex items-center justify-between group ${isActive ? (isBrightMode ? 'bg-blue-50 border border-blue-200' : 'bg-blue-600/10 border border-blue-500/30') : isBrightMode ? 'hover:bg-slate-50 border border-transparent' : 'hover:bg-white/5 border border-transparent'} ${isLocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
                           {isCompleted ? (
                             <CheckCircle2 className="text-emerald-500 shrink-0" size={18} />
                           ) : isLocked ? (
@@ -471,8 +571,11 @@ const AudiobookReviewPage = () => {
                             <div className={`h-2 w-2 rounded-full shrink-0 ${isActive ? 'bg-blue-500 animate-pulse' : isBrightMode ? 'bg-slate-300' : 'bg-slate-700'}`} />
                           )}
 
-                          <div className="flex flex-col">
-                            <span className={`text-sm font-bold tracking-tight ${isActive ? isBrightMode ? 'text-blue-600' : 'text-blue-400' : isBrightMode ? 'text-slate-700' : 'text-slate-300'}`}>
+                          <div className="flex flex-col min-w-0">
+                            <span className={`text-sm font-bold tracking-tight truncate ${isActive ? (isBrightMode ? 'text-blue-600' : 'text-blue-400') : isBrightMode ? 'text-slate-700' : 'text-slate-300'}`}>
+                              <span className="mr-2 text-[10px] font-black uppercase tracking-widest opacity-60">
+                                {index + 1}.
+                              </span>
                               {chapter.title}
                             </span>
                             <span className={`text-[9px] font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-500' : 'text-slate-600'}`}>
@@ -485,7 +588,8 @@ const AudiobookReviewPage = () => {
                   })}
                 </div>
               </div>
-            </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className={`rounded-3xl border p-6 md:p-8 ${isBrightMode ? 'border-cyan-100 bg-white/90' : 'border-cyan-800/30 bg-[#0b1320]/65'}`}>

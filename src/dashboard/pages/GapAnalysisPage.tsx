@@ -715,29 +715,35 @@ const GapAnalysisPage = () => {
   )
 }
 
-const StepItem = ({ icon, label, status, active = false }: { icon: React.ReactNode; label: string; status: string; active?: boolean }) => (
-  <div className={`flex flex-col items-center gap-2 min-w-25 py-3 transition-all ${!active ? 'opacity-40' : ''}`}>
-    <div
-      className={`h-12 w-12 rounded-2xl flex items-center justify-center border-2 shadow-sm transition-all ${
-        active
-          ? 'bg-indigo-100 border-indigo-400 text-indigo-600 ring-4 ring-indigo-50 dark:bg-indigo-900/30'
-          : 'bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800'
-      }`}
-    >
-      {icon}
-    </div>
-    <span className={`text-[10px] font-black uppercase tracking-wider ${active ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-400'}`}>{label}</span>
-    <span
-      className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-        active ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
-      }`}
-    >
-      {status}
-    </span>
-  </div>
-)
+const StepItem = ({ icon, label, status, active = false }: { icon: React.ReactNode; label: string; status: string; active?: boolean }) => {
+  const { isBrightMode } = useBrightness()
 
-const Divider = () => <div className="flex-1 h-0.5 mt-6 mx-1 bg-slate-100 dark:bg-slate-800 rounded-full" />
+  const inactiveOpacity = isBrightMode ? '' : 'opacity-40'
+  const inactiveIcon = isBrightMode ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-900/30 border-slate-800 text-slate-300'
+  const inactiveText = isBrightMode ? 'text-slate-600' : 'text-slate-400'
+  const inactivePill = isBrightMode ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-300'
+
+  return (
+    <div className={`flex flex-col items-center gap-2 min-w-25 py-3 transition-all ${!active ? inactiveOpacity : ''}`}>
+      <div
+        className={`h-12 w-12 rounded-2xl flex items-center justify-center border-2 shadow-sm transition-all ${
+          active ? 'bg-indigo-100 border-indigo-400 text-indigo-600 ring-4 ring-indigo-50' : inactiveIcon
+        }`}
+      >
+        {icon}
+      </div>
+      <span className={`text-[10px] font-black uppercase tracking-wider ${active ? 'text-indigo-700' : inactiveText}`}>{label}</span>
+      <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${active ? 'bg-indigo-100 text-indigo-600' : inactivePill}`}>
+        {status}
+      </span>
+    </div>
+  )
+}
+
+const Divider = () => {
+  const { isBrightMode } = useBrightness()
+  return <div className={`flex-1 h-0.5 mt-6 mx-1 rounded-full ${isBrightMode ? 'bg-slate-200' : 'bg-slate-800'}`} />
+}
 
 const TabButton = ({
   icon,
@@ -749,20 +755,27 @@ const TabButton = ({
   label: string
   active?: boolean
   onClick?: () => void
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all ${active ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'opacity-40 hover:opacity-100'}`}
-  >
-    <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${active ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-      {icon}
-    </div>
-    <span className={`text-[10px] font-black uppercase tracking-widest hidden sm:block ${active ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-400'}`}>
-      {label}
-    </span>
-  </button>
-)
+}) => {
+  const { isBrightMode } = useBrightness()
+
+  const activeButton = isBrightMode ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'bg-indigo-900/30'
+  const inactiveButton = isBrightMode ? 'hover:bg-slate-100/70' : 'opacity-40 hover:opacity-100'
+  const inactiveIcon = isBrightMode ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-300'
+  const inactiveText = isBrightMode ? 'text-slate-700' : 'text-slate-300'
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all ${active ? activeButton : inactiveButton}`}
+    >
+      <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${active ? 'bg-indigo-600 text-white' : inactiveIcon}`}>
+        {icon}
+      </div>
+      <span className={`text-[10px] font-black uppercase tracking-widest hidden sm:block ${active ? 'text-indigo-700' : inactiveText}`}>{label}</span>
+    </button>
+  )
+}
 
 const Badge = ({ label, value, color }: { label: string; value: string; color: string }) => (
   <div className="bg-linear-to-br from-white to-amber-50/70 dark:bg-slate-800/50 rounded-2xl px-6 py-4 border border-slate-100 dark:border-slate-700 min-w-35 shadow-[0_10px_30px_-24px_rgba(15,23,42,0.25)]">
