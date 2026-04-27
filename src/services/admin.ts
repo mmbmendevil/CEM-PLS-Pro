@@ -9,7 +9,9 @@ import {
 } from '@/dashboard/data/learningStage'
 import {
   getDiagnosticQuestionsByIdsForStage,
+  getDiagnosticQuestionPoolForStage,
   normalizeSelectedAnswersForStage,
+  computeModuleGapPerformance,
   type DiagnosticQuestion,
   type DiagnosticQuestionStage,
 } from '@/dashboard/data/diagnosticQuestions'
@@ -44,6 +46,28 @@ export type AdminUserStageDetail = {
   diagnosticStatus: 'Not Started' | 'In Progress' | 'Submitted'
   summativeStatus: 'Not Started' | 'In Progress' | 'Submitted'
   stageStatus: 'Not Started' | 'In Progress' | 'Passed' | 'Needs Improvement'
+}
+
+export type AdminGapAnalysisModuleResult = {
+  module: string
+  competencyCode: string
+  modulePerformance: number
+  totalQuestions: number
+  wrongQuestions: number
+}
+
+export type AdminGapAnalysisOutput = {
+  stage: LearningStageKey
+  label: string
+  diagnosticStatus: 'Not Started' | 'In Progress' | 'Submitted'
+  overallPercentage: number | null
+  knowledgeGaps: number
+  moduleResults: AdminGapAnalysisModuleResult[]
+}
+
+export type AdminUserDetailsBundle = {
+  stageDetails: AdminUserStageDetail[]
+  gapAnalysisOutputs: AdminGapAnalysisOutput[]
 }
 
 const roundToOne = (value: number) => Math.round(value * 10) / 10
@@ -193,6 +217,14 @@ const resolveAssessmentStatus = (record: AssessmentProgressRecord | undefined): 
   return 'In Progress'
 }
 
+const toPercentage = (correct: number, total: number) => {
+  if (total <= 0) {
+    return 0
+  }
+
+  return Number(((correct / total) * 100).toFixed(2))
+}
+
 const resolveStageStatus = (
   diagnosticStatus: 'Not Started' | 'In Progress' | 'Submitted',
   summativeStatus: 'Not Started' | 'In Progress' | 'Submitted',
@@ -213,6 +245,10 @@ export const getAdminUserStageDetails = async (uid: string): Promise<AdminUserSt
   const records = await getUserAssessmentProgress(uid)
   const assessmentMap = new Map(records.map((record) => [String(record.assessmentKey ?? ''), record]))
 
+  return getAdminUserStageDetailsFromMap(assessmentMap)
+}
+
+const getAdminUserStageDetailsFromMap = (assessmentMap: Map<string, AssessmentProgressRecord>): AdminUserStageDetail[] => {
   return LEARNING_STAGE_ORDER.map((stage) => {
     const config = getLearningStageConfig(stage)
     const diagnosticRecord = getStageDiagnosticRecord(assessmentMap, stage)
@@ -240,6 +276,66 @@ export const getAdminUserStageDetails = async (uid: string): Promise<AdminUserSt
       stageStatus: resolveStageStatus(diagnosticStatus, summativeStatus, summativeRecord),
     }
   })
+}
+
+const getAdminGapAnalysisOutputForStage = (
+  assessmentMap: Map<string, AssessmentProgressRecord>,
+  stage: LearningStageKey,
+): AdminGapAnalysisOutput => {
+  const config = getLearningStageConfig(stage)
+  const record = getStageDiagnosticRecord(assessmentMap, stage)
+  const diagnosticStatus = resolveAssessmentStatus(record)
+
+  const questionIds = Array.isArray(record?.questionIds)
+    ? record.questionIds.map((questionId) => Number(questionId)).filter((questionId) => Number.isFinite(questionId))
+    : []
+
+  const selectedAnswersRaw = record?.selectedAnswers ?? {}
+  const selectedAnswersNormalized = normalizeSelectedAnswersForStage(
+    Object.fromEntries(
+      Object.entries(selectedAnswersRaw).map(([questionId, answerIndex]) => [Number(questionId), Number(answerIndex)]),
+    ),
+    stage as DiagnosticQuestionStage,
+  )
+
+  const activeQuestions =
+    questionIds.length > 0 ? getDiagnosticQuestionsByIdsForStage(questionIds, stage as DiagnosticQuestionStage) : getDiagnosticQuestionPoolForStage(stage as DiagnosticQuestionStage)
+
+  const moduleResults = record
+    ? computeModuleGapPerformance(activeQuestions, selectedAnswersNormalized, stage as DiagnosticQuestionStage).map((entry) => ({
+      module: entry.module,
+      competencyCode: entry.competencyCode,
+      modulePerformance: Number(entry.modulePerformance.toFixed(2)),
+      totalQuestions: entry.totalQuestions,
+      wrongQuestions: entry.wrongQuestions,
+    }))
+    : []
+
+  const recordPercentage = Number(record?.percentage)
+  const score = Number(record?.score ?? 0)
+  const totalItems = Number(record?.totalItems ?? 0)
+  const overallPercentage = Number.isFinite(recordPercentage) ? recordPercentage : toPercentage(score, totalItems)
+
+  const knowledgeGaps = moduleResults.filter((entry) => entry.modulePerformance < 75).length
+
+  return {
+    stage,
+    label: config.label,
+    diagnosticStatus,
+    overallPercentage: record ? overallPercentage : null,
+    knowledgeGaps,
+    moduleResults,
+  }
+}
+
+export const getAdminUserDetailsBundle = async (uid: string): Promise<AdminUserDetailsBundle> => {
+  const records = await getUserAssessmentProgress(uid)
+  const assessmentMap = new Map(records.map((record) => [String(record.assessmentKey ?? ''), record]))
+
+  return {
+    stageDetails: getAdminUserStageDetailsFromMap(assessmentMap),
+    gapAnalysisOutputs: LEARNING_STAGE_ORDER.map((stage) => getAdminGapAnalysisOutputForStage(assessmentMap, stage)),
+  }
 }
 
 export const resetAdminUserProgress = async (uid: string) => {

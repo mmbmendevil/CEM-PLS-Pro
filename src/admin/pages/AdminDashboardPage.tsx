@@ -10,13 +10,16 @@ import {
   deleteAdminUserAccount,
   getAdminMetrics,
   getAdminUsers,
-  getAdminUserStageDetails,
+  getAdminUserDetailsBundle,
   resetAdminUserProgress,
+  type AdminGapAnalysisOutput,
   type AdminMetrics,
   type AdminUserRecord,
   type AdminUserStageDetail,
 } from '@/services/admin'
 import { signOutAdmin } from '@/services/adminAuth'
+
+const GAP_ANALYSIS_THRESHOLD = 75
 
 const KPI = ({
   title,
@@ -74,6 +77,8 @@ const AdminDashboardPage = () => {
   const [actionMessage, setActionMessage] = useState('')
   const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null)
   const [selectedUserDetails, setSelectedUserDetails] = useState<AdminUserStageDetail[]>([])
+  const [gapAnalysisOutputs, setGapAnalysisOutputs] = useState<AdminGapAnalysisOutput[]>([])
+  const [selectedGapStage, setSelectedGapStage] = useState<LearningStageKey>('prelim')
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [detailsErrorMessage, setDetailsErrorMessage] = useState('')
   const [selectedTrial, setSelectedTrial] = useState<{ stage: LearningStageKey; index: number } | null>(null)
@@ -219,12 +224,21 @@ const AdminDashboardPage = () => {
     setSelectedTrial(null)
     setIsLoadingDetails(true)
     setDetailsErrorMessage('')
+    setGapAnalysisOutputs([])
 
     try {
-      const details = await getAdminUserStageDetails(user.uid)
-      setSelectedUserDetails(details)
+      const bundle = await getAdminUserDetailsBundle(user.uid)
+      setSelectedUserDetails(bundle.stageDetails)
+      setGapAnalysisOutputs(bundle.gapAnalysisOutputs)
+
+      const defaultStage =
+        bundle.gapAnalysisOutputs.find((entry) => entry.diagnosticStatus === 'Submitted')?.stage ??
+        bundle.gapAnalysisOutputs.find((entry) => entry.diagnosticStatus === 'In Progress')?.stage ??
+        'prelim'
+      setSelectedGapStage(defaultStage)
     } catch {
       setSelectedUserDetails([])
+      setGapAnalysisOutputs([])
       setDetailsErrorMessage('Unable to load account details for this user.')
     } finally {
       setIsLoadingDetails(false)
@@ -250,6 +264,10 @@ const AdminDashboardPage = () => {
 
     return isBrightMode ? 'bg-gray-100 text-gray-700' : 'bg-slate-700 text-slate-200'
   }
+
+  const selectedGapOutput = useMemo(() => {
+    return gapAnalysisOutputs.find((entry) => entry.stage === selectedGapStage) ?? null
+  }, [gapAnalysisOutputs, selectedGapStage])
 
   const selectedTrialDetail = useMemo(() => {
     if (!selectedTrial) {
@@ -608,6 +626,128 @@ const AdminDashboardPage = () => {
                   </dl>
                 </article>
               ))}
+            </div>
+          ) : null}
+
+          {!isLoadingDetails && selectedUser && gapAnalysisOutputs.length > 0 ? (
+            <div className={`mt-6 rounded-2xl border p-5 ${isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'}`}>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3">
+                  <h4 className={`text-sm font-bold uppercase tracking-[0.16em] ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
+                    Gap Analysis Output
+                  </h4>
+                  {selectedGapOutput ? (
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${getStatusClasses(selectedGapOutput.diagnosticStatus)}`}>
+                      {selectedGapOutput.label} · {selectedGapOutput.diagnosticStatus}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {gapAnalysisOutputs.map((entry) => {
+                    const isActive = selectedGapStage === entry.stage
+                    const canSelect = entry.diagnosticStatus !== 'Not Started'
+
+                    return (
+                      <button
+                        key={`gap-stage-${entry.stage}`}
+                        type="button"
+                        onClick={() => {
+                          if (canSelect) {
+                            setSelectedGapStage(entry.stage)
+                          }
+                        }}
+                        disabled={!canSelect}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                          isBrightMode ? 'border-gray-200' : 'border-slate-700'
+                        } ${
+                          isActive
+                            ? isBrightMode
+                              ? 'bg-blue-100 text-blue-700 border-blue-200'
+                              : 'bg-blue-500/20 text-blue-200 border-blue-500/40'
+                            : isBrightMode
+                              ? 'bg-white text-gray-900 hover:bg-gray-50'
+                              : 'bg-slate-900/40 text-slate-100 hover:bg-slate-800/60'
+                        } ${!canSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {entry.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {!selectedGapOutput || selectedGapOutput.diagnosticStatus === 'Not Started' ? (
+                <p className={`mt-3 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                  No submitted diagnostic assessment found for this stage.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className={`rounded-xl border p-4 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700 bg-slate-950/40'}`}>
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Overall Score</p>
+                      <p className={`mt-2 text-3xl font-black ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
+                        {typeof selectedGapOutput.overallPercentage === 'number' ? `${selectedGapOutput.overallPercentage.toFixed(2)}%` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className={`rounded-xl border p-4 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700 bg-slate-950/40'}`}>
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Knowledge Gaps</p>
+                      <p className={`mt-2 text-3xl font-black ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{selectedGapOutput.knowledgeGaps}</p>
+                      <p className={`mt-1 text-xs ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>Modules below {GAP_ANALYSIS_THRESHOLD}%</p>
+                    </div>
+                    <div className={`rounded-xl border p-4 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700 bg-slate-950/40'}`}>
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>Modules Tracked</p>
+                      <p className={`mt-2 text-3xl font-black ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{selectedGapOutput.moduleResults.length}</p>
+                    </div>
+                  </div>
+
+                  {selectedGapOutput.moduleResults.length > 0 ? (
+                    <div className={`mt-5 overflow-hidden rounded-xl border ${isBrightMode ? 'border-gray-200/70' : 'border-slate-700'}`}>
+                      <div className={`grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'bg-gray-50 text-gray-500' : 'bg-slate-950/40 text-slate-400'}`}>
+                        <span className="col-span-7">Module</span>
+                        <span className="col-span-2 text-right">Score</span>
+                        <span className="col-span-3 text-right">Wrong</span>
+                      </div>
+                      <div className={isBrightMode ? 'bg-white' : 'bg-slate-900/40'}>
+                        {selectedGapOutput.moduleResults.map((entry) => {
+                          const isPassing = entry.modulePerformance >= GAP_ANALYSIS_THRESHOLD
+                          const scoreColor = isPassing
+                            ? isBrightMode
+                              ? 'text-emerald-700'
+                              : 'text-emerald-300'
+                            : isBrightMode
+                              ? 'text-rose-700'
+                              : 'text-rose-300'
+
+                          return (
+                            <div
+                              key={`gap-module-${selectedGapOutput.stage}-${entry.competencyCode}`}
+                              className={`grid grid-cols-12 gap-3 border-t px-4 py-3 text-sm ${
+                                isBrightMode ? 'border-gray-100 text-gray-800' : 'border-slate-800 text-slate-100'
+                              }`}
+                            >
+                              <div className="col-span-7">
+                                <p className="font-semibold">{entry.module}</p>
+                                <p className={`mt-0.5 text-[11px] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>{entry.competencyCode}</p>
+                              </div>
+                              <div className={`col-span-2 text-right font-bold ${scoreColor}`}>
+                                {Number.isFinite(entry.modulePerformance) ? `${entry.modulePerformance.toFixed(2)}%` : '0%'}
+                              </div>
+                              <div className={`col-span-3 text-right text-xs ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                                {entry.wrongQuestions}/{entry.totalQuestions}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={`mt-3 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                      No saved module breakdown found for this stage.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           ) : null}
 
