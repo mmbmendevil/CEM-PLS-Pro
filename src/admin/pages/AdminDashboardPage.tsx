@@ -8,11 +8,13 @@ import { getDiagnosticQuestionsByIdsForStage } from '@/dashboard/data/diagnostic
 import type { LearningStageKey } from '@/dashboard/data/learningStage'
 import {
   deleteAdminUserAccount,
+  getAdminLearningGains,
   getAdminMetrics,
   getAdminUsers,
   getAdminUserDetailsBundle,
   resetAdminUserProgress,
   type AdminGapAnalysisOutput,
+  type AdminLearningGainRow,
   type AdminMetrics,
   type AdminUserRecord,
   type AdminUserStageDetail,
@@ -68,6 +70,7 @@ const AdminDashboardPage = () => {
   const { isBrightMode } = useBrightness()
   const [metrics, setMetrics] = useState<AdminMetrics>(INITIAL_METRICS)
   const [users, setUsers] = useState<AdminUserRecord[]>([])
+  const [learningGains, setLearningGains] = useState<AdminLearningGainRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -93,9 +96,10 @@ const AdminDashboardPage = () => {
     setErrorMessage('')
 
     try {
-      const [nextMetrics, nextUsers] = await Promise.all([getAdminMetrics(), getAdminUsers()])
+      const [nextMetrics, nextUsers, nextLearningGains] = await Promise.all([getAdminMetrics(), getAdminUsers(), getAdminLearningGains()])
       setMetrics(nextMetrics)
       setUsers(nextUsers)
+      setLearningGains(nextLearningGains)
     } catch {
       setErrorMessage('Unable to load admin data. Check your Firestore permissions for admin access.')
     } finally {
@@ -213,6 +217,31 @@ const AdminDashboardPage = () => {
     ],
     [metrics],
   )
+
+  const formatGain = (value: number | null) => {
+    if (value === null) {
+      return '-'
+    }
+
+    const sign = value > 0 ? '+' : ''
+    return `${sign}${value.toFixed(1)}%`
+  }
+
+  const gainClass = (value: number | null) => {
+    if (value === null) {
+      return isBrightMode ? 'text-gray-500' : 'text-slate-400'
+    }
+
+    if (value >= 5) {
+      return isBrightMode ? 'text-emerald-700' : 'text-emerald-300'
+    }
+
+    if (value <= -5) {
+      return isBrightMode ? 'text-rose-700' : 'text-rose-300'
+    }
+
+    return isBrightMode ? 'text-amber-700' : 'text-amber-300'
+  }
 
   const handleLogout = () => {
     signOutAdmin()
@@ -385,6 +414,69 @@ const AdminDashboardPage = () => {
           />
         ))}
       </div>
+
+      <article
+        className={`rounded-2xl border p-6 ${
+          isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
+        }`}
+      >
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className={`text-lg font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Learning Gains</h2>
+            <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+              Diagnostic → Post-test gain per stage (submitted attempts only).
+            </p>
+          </div>
+          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+            {learningGains.length} student{learningGains.length === 1 ? '' : 's'}
+          </p>
+        </div>
+
+        {learningGains.length === 0 ? (
+          <p className={`mt-4 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+            No submitted diagnostic/post-test pairs found yet.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-180 text-left text-sm">
+              <thead>
+                <tr className={`${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                  <th className="py-2 pr-3 font-semibold">Student</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Prelim</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Midterm</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Final</th>
+                  <th className="py-2 pr-0 text-right font-semibold">Overall</th>
+                </tr>
+              </thead>
+              <tbody>
+                {learningGains.map((row) => (
+                  <tr
+                    key={`gain-${row.uid}`}
+                    onClick={() => {
+                      const target = users.find((user) => user.uid === row.uid)
+                      if (target) {
+                        void handleSelectUser(target)
+                      }
+                    }}
+                    className={`cursor-pointer border-t transition ${
+                      isBrightMode ? 'border-gray-200 text-gray-800 hover:bg-gray-50' : 'border-slate-700 text-slate-200 hover:bg-slate-800/40'
+                    } ${selectedUser?.uid === row.uid ? (isBrightMode ? 'bg-blue-50' : 'bg-blue-950/20') : ''}`}
+                  >
+                    <td className="py-3 pr-3">
+                      <p className="font-semibold">{row.fullName}</p>
+                      <p className={`mt-0.5 text-xs ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>{row.email}</p>
+                    </td>
+                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.prelimGain)}`}>{formatGain(row.prelimGain)}</td>
+                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.midtermGain)}`}>{formatGain(row.midtermGain)}</td>
+                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.finalGain)}`}>{formatGain(row.finalGain)}</td>
+                    <td className={`py-3 pr-0 text-right font-black ${gainClass(row.overallGain)}`}>{formatGain(row.overallGain)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
 
       <article
         className={`rounded-2xl border p-6 ${

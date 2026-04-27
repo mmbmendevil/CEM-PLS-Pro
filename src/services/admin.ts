@@ -95,6 +95,16 @@ export type AdminItemAnalysisRow = {
   optionPercents: number[]
 }
 
+export type AdminLearningGainRow = {
+  uid: string
+  fullName: string
+  email: string
+  prelimGain: number | null
+  midtermGain: number | null
+  finalGain: number | null
+  overallGain: number | null
+}
+
 const deleteUserSubcollectionDocs = async (uid: string, subcollectionName: string) => {
   const snapshots = await getDocs(collection(db, 'userProfiles', uid, subcollectionName))
   await Promise.all(snapshots.docs.map((entry) => deleteDoc(entry.ref)))
@@ -203,6 +213,105 @@ export const getAdminMetrics = async (): Promise<AdminMetrics> => {
     averageSummativeScore: getAverage(summativeScores),
     averageOverallScore: getAverage(allScores),
   }
+}
+
+const resolveUidFromAssessmentRefPath = (path: string) => {
+  // userProfiles/{uid}/AssessmentProgress/{assessmentKey}
+  const parts = path.split('/')
+  const uid = parts.length >= 2 ? parts[1] : ''
+  return uid || null
+}
+
+const resolveSubmittedPercentage = (record: AssessmentProgressRecord | undefined) => {
+  if (!record) {
+    return null
+  }
+
+  const isSubmitted = record.isSubmitted === true || record.isFinished === true
+
+  if (!isSubmitted) {
+    return null
+  }
+
+  const recordPercentage = Number(record.percentage)
+  if (Number.isFinite(recordPercentage)) {
+    return recordPercentage
+  }
+
+  const score = Number(record.score ?? 0)
+  const totalItems = Number(record.totalItems ?? 0)
+
+  return toPercentage(score, totalItems)
+}
+
+const computeLearningGainForStage = (assessmentMap: Map<string, AssessmentProgressRecord>, stage: LearningStageKey) => {
+  const diagnosticRecord = getStageDiagnosticRecord(assessmentMap, stage)
+  const summativeRecord = getStageSummativeRecord(assessmentMap, stage)
+  const diagnosticPercent = resolveSubmittedPercentage(diagnosticRecord)
+  const summativePercent = resolveSubmittedPercentage(summativeRecord)
+
+  if (diagnosticPercent === null || summativePercent === null) {
+    return null
+  }
+
+  return roundToOne(summativePercent - diagnosticPercent)
+}
+
+export const getAdminLearningGains = async (): Promise<AdminLearningGainRow[]> => {
+  const [userSnapshots, assessmentSnapshots] = await Promise.all([
+    getDocs(collection(db, 'userProfiles')),
+    getDocs(collectionGroup(db, ASSESSMENT_PROGRESS_COLLECTION)),
+  ])
+
+  const userProfiles = userSnapshots.docs.map((entry) => {
+    const payload = entry.data() as Partial<UserProfile>
+
+    return {
+      uid: entry.id,
+      fullName: payload.fullName?.trim() || 'Unnamed User',
+      email: payload.email?.trim() || 'No email',
+      role: payload.role === 'admin' ? 'admin' : 'student',
+    } as AdminUserRecord
+  })
+
+  const userAssessmentMaps = new Map<string, Map<string, AssessmentProgressRecord>>()
+
+  assessmentSnapshots.forEach((entry) => {
+    const uid = resolveUidFromAssessmentRefPath(entry.ref.path)
+
+    if (!uid) {
+      return
+    }
+
+    const payload = entry.data() as AssessmentProgressRecord
+    const key = String(payload.assessmentKey ?? entry.id)
+    const existing = userAssessmentMaps.get(uid) ?? new Map<string, AssessmentProgressRecord>()
+    existing.set(key, { ...payload, assessmentKey: key })
+    userAssessmentMaps.set(uid, existing)
+  })
+
+  const rows = userProfiles
+    .filter((profile) => profile.role !== 'admin')
+    .map((profile) => {
+      const assessmentMap = userAssessmentMaps.get(profile.uid) ?? new Map<string, AssessmentProgressRecord>()
+      const prelimGain = computeLearningGainForStage(assessmentMap, 'prelim')
+      const midtermGain = computeLearningGainForStage(assessmentMap, 'midterm')
+      const finalGain = computeLearningGainForStage(assessmentMap, 'final')
+      const gains = [prelimGain, midtermGain, finalGain].filter((value): value is number => typeof value === 'number')
+      const overallGain = gains.length > 0 ? roundToOne(gains.reduce((total, value) => total + value, 0) / gains.length) : null
+
+      return {
+        uid: profile.uid,
+        fullName: profile.fullName,
+        email: profile.email,
+        prelimGain,
+        midtermGain,
+        finalGain,
+        overallGain,
+      } satisfies AdminLearningGainRow
+    })
+
+  return rows.sort((first, second) => first.fullName.localeCompare(second.fullName))
 }
 
 const resolveAssessmentStatus = (record: AssessmentProgressRecord | undefined): 'Not Started' | 'In Progress' | 'Submitted' => {
