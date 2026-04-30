@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ShieldCheck, Users, GraduationCap, ChartLine, MailCheck, RefreshCw, RotateCcw, Trash2, BarChart3 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useBrightness } from '@/contexts/BrightnessContext'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { sendResetPasswordEmail } from '@/services/auth'
@@ -22,6 +23,7 @@ import {
 import { signOutAdmin } from '@/services/adminAuth'
 
 const GAP_ANALYSIS_THRESHOLD = 75
+const roundToOne = (value: number) => Math.round(value * 10) / 10
 
 const KPI = ({
   title,
@@ -297,6 +299,39 @@ const AdminDashboardPage = () => {
   const selectedGapOutput = useMemo(() => {
     return gapAnalysisOutputs.find((entry) => entry.stage === selectedGapStage) ?? null
   }, [gapAnalysisOutputs, selectedGapStage])
+
+  const selectedUserGainChart = useMemo(() => {
+    if (!selectedUser || selectedUserDetails.length === 0) {
+      return []
+    }
+
+    return selectedUserDetails.map((entry) => {
+      const diagnostic = entry.diagnosticScore
+      const postTest = entry.summativeScore
+      const gain = typeof diagnostic === 'number' && typeof postTest === 'number' ? roundToOne(postTest - diagnostic) : null
+
+      return {
+        stage: entry.label,
+        diagnostic,
+        postTest,
+        gain,
+      }
+    })
+  }, [selectedUser, selectedUserDetails])
+
+  const gainDomain = useMemo(() => {
+    const gains = selectedUserGainChart.map((entry) => entry.gain).filter((value): value is number => typeof value === 'number')
+
+    if (gains.length === 0) {
+      return [-25, 25] as const
+    }
+
+    const min = Math.min(...gains, -5)
+    const max = Math.max(...gains, 5)
+    const pad = 5
+
+    return [Math.floor(min - pad), Math.ceil(max + pad)] as const
+  }, [selectedUserGainChart])
 
   const selectedTrialDetail = useMemo(() => {
     if (!selectedTrial) {
@@ -718,6 +753,90 @@ const AdminDashboardPage = () => {
                   </dl>
                 </article>
               ))}
+            </div>
+          ) : null}
+
+          {!isLoadingDetails && selectedUser && selectedUserGainChart.length > 0 ? (
+            <div className={`mt-6 rounded-2xl border p-5 ${isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'}`}>
+              <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                <h4 className={`text-sm font-bold uppercase tracking-[0.16em] ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>
+                  Learning Gain Visualization
+                </h4>
+                <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                  Diagnostic vs Post-test · Gain line
+                </p>
+              </div>
+
+              <div className="mt-4 h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={selectedUserGainChart} margin={{ top: 10, right: 24, bottom: 10, left: 6 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isBrightMode ? '#e5e7eb' : '#334155'} />
+                    <XAxis dataKey="stage" tick={{ fill: isBrightMode ? '#475569' : '#cbd5e1', fontSize: 12 }} />
+                    <YAxis yAxisId="score" domain={[0, 100]} tick={{ fill: isBrightMode ? '#475569' : '#cbd5e1', fontSize: 12 }} />
+                    <YAxis
+                      yAxisId="gain"
+                      orientation="right"
+                      domain={gainDomain}
+                      tick={{ fill: isBrightMode ? '#475569' : '#cbd5e1', fontSize: 12 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: isBrightMode ? 'rgba(148,163,184,0.12)' : 'rgba(2,6,23,0.35)' }}
+                      contentStyle={{
+                        background: isBrightMode ? '#ffffff' : '#0b1220',
+                        border: isBrightMode ? '1px solid #e5e7eb' : '1px solid rgba(148,163,184,0.25)',
+                        borderRadius: 12,
+                      }}
+                      labelStyle={{ color: isBrightMode ? '#0f172a' : '#e2e8f0', fontWeight: 700 }}
+                      itemStyle={{ color: isBrightMode ? '#334155' : '#e2e8f0' }}
+                      formatter={(value: unknown, name?: string | number) => {
+                        const label = name === undefined ? '' : String(name)
+                        if (value === null || value === undefined) {
+                          return ['N/A', label]
+                        }
+
+                        if (typeof value === 'number') {
+                          if (label === 'Gain') {
+                            const sign = value > 0 ? '+' : ''
+                            return [`${sign}${value.toFixed(1)}%`, label]
+                          }
+
+                          return [`${value.toFixed(1)}%`, label]
+                        }
+
+                        return [String(value), label]
+                      }}
+                    />
+
+                    <Bar
+                      yAxisId="score"
+                      dataKey="diagnostic"
+                      name="Diagnostic"
+                      fill={isBrightMode ? '#60a5fa' : '#38bdf8'}
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={42}
+                    />
+                    <Bar
+                      yAxisId="score"
+                      dataKey="postTest"
+                      name="Post-test"
+                      fill={isBrightMode ? '#a78bfa' : '#a78bfa'}
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={42}
+                    />
+                    <Line
+                      yAxisId="gain"
+                      type="monotone"
+                      dataKey="gain"
+                      name="Gain"
+                      stroke={isBrightMode ? '#10b981' : '#34d399'}
+                      strokeWidth={3}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      connectNulls={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           ) : null}
 

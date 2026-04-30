@@ -4,6 +4,8 @@ import { MODULE_CONFIG } from './moduleConfig'
 
 export type LearningStageKey = 'prelim' | 'midterm' | 'final'
 
+export const SUMMATIVE_MAX_FAILED_ATTEMPTS = 3
+
 const getStageModuleIds = (stage: LearningStageKey) => {
   return MODULE_CONFIG.filter((moduleConfig) => moduleConfig.stage === stage)
     .sort((first, second) => first.order - second.order)
@@ -163,6 +165,34 @@ export const getStageSummativeRecord = (
   assessmentMap: Map<string, AssessmentProgressRecord>,
   stage: LearningStageKey,
 ) => assessmentMap.get(getLearningStageConfig(stage).summativeAssessmentKey)
+
+export const isCourseLocked = (assessmentMap: Map<string, AssessmentProgressRecord>) => {
+  for (const stage of LEARNING_STAGE_ORDER) {
+    const record = getStageSummativeRecord(assessmentMap, stage)
+
+    if (!record) {
+      continue
+    }
+
+    const submitted = record.isSubmitted === true || record.isFinished === true
+    if (!submitted) {
+      continue
+    }
+
+    if (record.passed === true) {
+      continue
+    }
+
+    const failedAttempts = Math.max(0, Number(record.failedAttempts ?? 0))
+    const locked = record.isLocked === true || failedAttempts >= SUMMATIVE_MAX_FAILED_ATTEMPTS
+
+    if (locked) {
+      return true
+    }
+  }
+
+  return false
+}
 
 export const getLatestSubmittedSummativeRecord = (
   assessmentMap: Map<string, AssessmentProgressRecord>,

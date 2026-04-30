@@ -24,6 +24,7 @@ import {
   getStageDiagnosticRecord,
   getStageSummativeRecord,
   hasReviewerForStage,
+  isCourseLocked,
   resolveLearningStage,
   getLearningStageConfig,
   type LearningStageKey,
@@ -188,6 +189,7 @@ const Sidebar = () => {
   const [isCertificationUnlocked, setIsCertificationUnlocked] = useState(false)
   const [hasPassedSummative, setHasPassedSummative] = useState(false)
   const [hasReviewerCreated, setHasReviewerCreated] = useState(false)
+  const [courseLocked, setCourseLocked] = useState(false)
   const [stageLocks, setStageLocks] = useState<Record<LearningStageKey, { unlocked: boolean; reason: string }>>({
     prelim: { unlocked: true, reason: '' },
     midterm: { unlocked: false, reason: 'Locked until Prelim is passed' },
@@ -209,6 +211,7 @@ const Sidebar = () => {
         setIsCertificationUnlocked(false)
         setHasPassedSummative(false)
         setHasReviewerCreated(false)
+        setCourseLocked(false)
         setStageLocks({
           prelim: { unlocked: true, reason: '' },
           midterm: { unlocked: false, reason: 'Locked until Prelim is passed' },
@@ -242,6 +245,7 @@ const Sidebar = () => {
       const displayedStageRecord = getStageDiagnosticRecord(assessmentMap, displayedStage)
       const displayedStageSummativeRecord = getStageSummativeRecord(assessmentMap, displayedStage)
       const finalStageSummativeRecord = getStageSummativeRecord(assessmentMap, 'final')
+      const lockedCourse = isCourseLocked(assessmentMap)
 
       setIsDiagnosticUnlocked(areStageModulesCompleted(moduleRecords, displayedStage))
       setIsGapAnalysisUnlocked(displayedStageRecord?.isSubmitted === true || displayedStageRecord?.isFinished === true)
@@ -256,6 +260,7 @@ const Sidebar = () => {
       setIsCertificationUnlocked(finalStageSummativeRecord?.isSubmitted === true || finalStageSummativeRecord?.isFinished === true)
       setHasPassedSummative(displayedStageSummativeRecord?.passed === true)
       setHasReviewerCreated(hasReviewerForStage(displayedStageRecord))
+      setCourseLocked(lockedCourse)
 
       setStageLocks({
         prelim: prelimLock,
@@ -340,7 +345,10 @@ const Sidebar = () => {
               icon={<Book size={20} />}
               label="Courses"
               isActive={isCoursesActive}
-              to={ROUTE_PATHS.dashboard.courses}
+              isUnlocked={!courseLocked}
+              isLocked={courseLocked}
+              subtitle={courseLocked ? 'LOCKED' : 'BROWSE'}
+              to={!courseLocked ? ROUTE_PATHS.dashboard.courses : undefined}
               isCollapsed={isCollapsed}
               isBrightMode={isBrightMode}
             />
@@ -426,9 +434,10 @@ const Sidebar = () => {
               icon={<Layers size={20} />}
               label="Course Modules"
               isActive={isModulesActive}
-              isUnlocked={true}
-              subtitle="CURRENT"
-              to={ROUTE_PATHS.dashboard.modules}
+              isUnlocked={!courseLocked && !effectiveStageIsLocked}
+              isLocked={courseLocked || effectiveStageIsLocked}
+              subtitle={courseLocked || effectiveStageIsLocked ? 'LOCKED' : 'CURRENT'}
+              to={!courseLocked && !effectiveStageIsLocked ? ROUTE_PATHS.dashboard.modules : undefined}
               isCollapsed={isCollapsed}
               isBrightMode={isBrightMode}
             />
@@ -436,11 +445,11 @@ const Sidebar = () => {
               icon={<ClipboardCheck size={20} />}
               label="Diagnostic Pre-test"
               isActive={isDiagnosticActive}
-              isUnlocked={isDiagnosticUnlocked}
-              isLocked={!isDiagnosticUnlocked}
-              subtitle={isDiagnosticUnlocked ? 'UNLOCKED' : 'LOCKED'}
-              statusIcon={isDiagnosticUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
-              to={isDiagnosticUnlocked ? ROUTE_PATHS.dashboard.diagnostic : undefined}
+              isUnlocked={!courseLocked && isDiagnosticUnlocked}
+              isLocked={courseLocked || !isDiagnosticUnlocked}
+              subtitle={!courseLocked && isDiagnosticUnlocked ? 'UNLOCKED' : 'LOCKED'}
+              statusIcon={!courseLocked && isDiagnosticUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+              to={!courseLocked && isDiagnosticUnlocked ? ROUTE_PATHS.dashboard.diagnostic : undefined}
               isCollapsed={isCollapsed}
               isBrightMode={isBrightMode}
             />
@@ -448,11 +457,11 @@ const Sidebar = () => {
               icon={<BrainCircuit size={20} />}
               label="Gap Analysis"
               isActive={isGapAnalysisActive}
-              isUnlocked={isGapAnalysisUnlocked}
-              isLocked={!isGapAnalysisUnlocked}
-              subtitle={isGapAnalysisUnlocked ? 'UNLOCKED' : 'LOCKED'}
-              statusIcon={isGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
-              to={isGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.gapAnalysis : undefined}
+              isUnlocked={!courseLocked && isGapAnalysisUnlocked}
+              isLocked={courseLocked || !isGapAnalysisUnlocked}
+              subtitle={!courseLocked && isGapAnalysisUnlocked ? 'UNLOCKED' : 'LOCKED'}
+              statusIcon={!courseLocked && isGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+              to={!courseLocked && isGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.gapAnalysis : undefined}
               isCollapsed={isCollapsed}
               isBrightMode={isBrightMode}
             />
@@ -461,11 +470,11 @@ const Sidebar = () => {
                 icon={<FileText size={20} />}
                 label="Personalized Study Plan"
                 isActive={isStudyPlanActive}
-                isUnlocked={isStudyPlanUnlocked}
-                isLocked={!isStudyPlanUnlocked}
-                subtitle={isStudyPlanUnlocked ? 'UNLOCKED' : 'LOCKED'}
-                statusIcon={isStudyPlanUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
-                to={isStudyPlanUnlocked ? ROUTE_PATHS.dashboard.studyPlan : undefined}
+                isUnlocked={!courseLocked && isStudyPlanUnlocked}
+                isLocked={courseLocked || !isStudyPlanUnlocked}
+                subtitle={!courseLocked && isStudyPlanUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                statusIcon={!courseLocked && isStudyPlanUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={!courseLocked && isStudyPlanUnlocked ? ROUTE_PATHS.dashboard.studyPlan : undefined}
                 isCollapsed={isCollapsed}
                 isBrightMode={isBrightMode}
               />
@@ -474,11 +483,11 @@ const Sidebar = () => {
                 icon={<FileText size={20} />}
                 label="Review Page"
                 isActive={isReviewActive}
-                isUnlocked={isReviewUnlocked}
-                isLocked={!isReviewUnlocked}
-                subtitle={isReviewUnlocked ? 'READY' : 'LOCKED'}
-                statusIcon={isReviewUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
-                to={isReviewUnlocked ? ROUTE_PATHS.dashboard.review : undefined}
+                isUnlocked={!courseLocked && isReviewUnlocked}
+                isLocked={courseLocked || !isReviewUnlocked}
+                subtitle={!courseLocked && isReviewUnlocked ? 'READY' : 'LOCKED'}
+                statusIcon={!courseLocked && isReviewUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={!courseLocked && isReviewUnlocked ? ROUTE_PATHS.dashboard.review : undefined}
                 isCollapsed={isCollapsed}
                 isBrightMode={isBrightMode}
               />
@@ -487,11 +496,11 @@ const Sidebar = () => {
               icon={<CheckSquare size={20} />}
               label="Summative Post-test"
               isActive={isPostTestActive}
-              isUnlocked={isSummativeUnlocked}
-              isLocked={!isSummativeUnlocked}
-              subtitle={isSummativeUnlocked ? 'UNLOCKED' : 'LOCKED'}
-              statusIcon={isSummativeUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
-              to={isSummativeUnlocked ? ROUTE_PATHS.dashboard.postTest : undefined}
+              isUnlocked={!courseLocked && isSummativeUnlocked}
+              isLocked={courseLocked || !isSummativeUnlocked}
+              subtitle={!courseLocked && isSummativeUnlocked ? 'UNLOCKED' : 'LOCKED'}
+              statusIcon={!courseLocked && isSummativeUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+              to={!courseLocked && isSummativeUnlocked ? ROUTE_PATHS.dashboard.postTest : undefined}
               isCollapsed={isCollapsed}
               isBrightMode={isBrightMode}
             />
@@ -500,11 +509,11 @@ const Sidebar = () => {
                 icon={<BrainCircuit size={20} />}
                 label="Post-Test Gap Analysis"
                 isActive={isPostTestGapAnalysisActive}
-                isUnlocked={isPostTestGapAnalysisUnlocked}
-                isLocked={false}
-                subtitle={isPostTestGapAnalysisUnlocked ? 'FAILED TEST' : 'LOCKED'}
-                statusIcon={isPostTestGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
-                to={isPostTestGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.postTestGapAnalysis : undefined}
+                isUnlocked={!courseLocked && isPostTestGapAnalysisUnlocked}
+                isLocked={courseLocked}
+                subtitle={!courseLocked && isPostTestGapAnalysisUnlocked ? 'FAILED TEST' : 'LOCKED'}
+                statusIcon={!courseLocked && isPostTestGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={!courseLocked && isPostTestGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.postTestGapAnalysis : undefined}
                 isCollapsed={isCollapsed}
                 isBrightMode={isBrightMode}
               />

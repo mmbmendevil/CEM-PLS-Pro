@@ -30,6 +30,7 @@ import {
   getStageDiagnosticRecord,
   getStageSummativeRecord,
   hasReviewerForStage,
+  isCourseLocked,
   resolveStageForSelection,
 } from '../dashboard/data/learningStage'
 import { getUserAssessmentProgress } from '../services/assessmentProgress'
@@ -44,6 +45,11 @@ type ReviewerRouteGateProps = {
 type StageFlowGateProps = {
   user: User
   mode: 'summative' | 'results' | 'certification'
+  element: ReactElement
+}
+
+type CourseLockGateProps = {
+  user: User
   element: ReactElement
 }
 
@@ -166,6 +172,53 @@ const StageFlowGate = ({ user, mode, element }: StageFlowGateProps) => {
   return element
 }
 
+const CourseLockGate = ({ user, element }: CourseLockGateProps) => {
+  const { selectedStage } = useGradingStage()
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLocked, setIsLocked] = useState(false)
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const loadLockState = async () => {
+      setIsLoading(true)
+      const assessmentRecords = await getUserAssessmentProgress(user.uid)
+
+      if (isCancelled) {
+        return
+      }
+
+      const assessmentMap = new Map(assessmentRecords.map((record) => [record.assessmentKey, record]))
+      // selectedStage is included to keep this gate in sync with stage changes.
+      void resolveStageForSelection(assessmentMap, selectedStage)
+      setIsLocked(isCourseLocked(assessmentMap))
+      setIsLoading(false)
+    }
+
+    void loadLockState()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedStage, user.uid])
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#050a15]" />
+  }
+
+  if (isLocked) {
+    return (
+      <Navigate
+        to={ROUTE_PATHS.dashboard.results}
+        replace
+        state={{ redirectNotice: 'Course is locked after 3 failed post-test attempts. Contact your admin to reset.' }}
+      />
+    )
+  }
+
+  return element
+}
+
 const AppRoutes = () => {
   const [user, setUser] = useState<User | null>(auth.currentUser)
   const [isAuthReady, setIsAuthReady] = useState(false)
@@ -210,18 +263,36 @@ const AppRoutes = () => {
         element={user ? <DashboardLayout /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
       >
         <Route index element={<DashboardPage />} />
-        <Route path="courses" element={<CoursesPage />} />
+        <Route
+          path="courses"
+          element={user ? <CourseLockGate user={user} element={<CoursesPage />} /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
+        />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="modules" element={<ModulesPage />} />
-        <Route path="modules/viewer" element={<ModuleViewerPage />} />
-        <Route path="prelim" element={<DiagnosticPretestPage />} />
+        <Route
+          path="modules"
+          element={user ? <CourseLockGate user={user} element={<ModulesPage />} /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
+        />
+        <Route
+          path="modules/viewer"
+          element={user ? <CourseLockGate user={user} element={<ModuleViewerPage />} /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
+        />
+        <Route
+          path="prelim"
+          element={user ? <CourseLockGate user={user} element={<DiagnosticPretestPage />} /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
+        />
         <Route path="diagnostic-pretest" element={<Navigate to={ROUTE_PATHS.dashboard.diagnostic} replace />} />
-        <Route path="gap-analysis" element={<GapAnalysisPage />} />
+        <Route
+          path="gap-analysis"
+          element={user ? <CourseLockGate user={user} element={<GapAnalysisPage />} /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
+        />
         <Route
           path="personalized-study-plan"
           element={
             user ? (
-              <ReviewerRouteGate user={user} mode="study-plan" element={<PersonalizedStudyPlanPage />} />
+              <CourseLockGate
+                user={user}
+                element={<ReviewerRouteGate user={user} mode="study-plan" element={<PersonalizedStudyPlanPage />} />}
+              />
             ) : (
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
@@ -231,7 +302,7 @@ const AppRoutes = () => {
           path="review"
           element={
             user ? (
-              <ReviewerRouteGate user={user} mode="review" element={<ReviewLandingPage />} />
+              <CourseLockGate user={user} element={<ReviewerRouteGate user={user} mode="review" element={<ReviewLandingPage />} />} />
             ) : (
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
@@ -241,7 +312,7 @@ const AppRoutes = () => {
           path="review/flashcards"
           element={
             user ? (
-              <ReviewerRouteGate user={user} mode="review" element={<FlashcardReviewPage />} />
+              <CourseLockGate user={user} element={<ReviewerRouteGate user={user} mode="review" element={<FlashcardReviewPage />} />} />
             ) : (
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
@@ -251,7 +322,7 @@ const AppRoutes = () => {
           path="review/audiobook"
           element={
             user ? (
-              <ReviewerRouteGate user={user} mode="review" element={<AudiobookReviewPage />} />
+              <CourseLockGate user={user} element={<ReviewerRouteGate user={user} mode="review" element={<AudiobookReviewPage />} />} />
             ) : (
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
@@ -261,7 +332,7 @@ const AppRoutes = () => {
           path="review/cheatsheet"
           element={
             user ? (
-              <ReviewerRouteGate user={user} mode="review" element={<CheatsheetReviewPage />} />
+              <CourseLockGate user={user} element={<ReviewerRouteGate user={user} mode="review" element={<CheatsheetReviewPage />} />} />
             ) : (
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
@@ -271,7 +342,7 @@ const AppRoutes = () => {
           path="summative-posttest"
           element={
             user ? (
-              <StageFlowGate user={user} mode="summative" element={<SummativePosttestPage />} />
+              <CourseLockGate user={user} element={<StageFlowGate user={user} mode="summative" element={<SummativePosttestPage />} />} />
             ) : (
               <Navigate to={ROUTE_PATHS.auth.login} replace />
             )
@@ -279,7 +350,7 @@ const AppRoutes = () => {
         />
         <Route
           path="post-test-gap-analysis"
-          element={user ? <PostTestGapAnalysisPage /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
+          element={user ? <CourseLockGate user={user} element={<PostTestGapAnalysisPage />} /> : <Navigate to={ROUTE_PATHS.auth.login} replace />}
         />
         <Route
           path="learning-results"

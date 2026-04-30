@@ -25,6 +25,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  ComposedChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -39,6 +41,7 @@ import {
   getStageDiagnosticRecord,
   getStageSummativeRecord,
   hasReviewerForStage,
+  isCourseLocked,
   resolveStageForSelection,
   type LearningStageKey,
 } from '../data/learningStage';
@@ -92,6 +95,8 @@ const formatTime = (value: Date | null) => {
   return value.toLocaleString()
 }
 
+const roundToOne = (value: number) => Math.round(value * 10) / 10
+
 const DashboardPage: React.FC = () => {
   const { isBrightMode } = useBrightness();
   const { selectedStage } = useGradingStage();
@@ -143,6 +148,8 @@ const DashboardPage: React.FC = () => {
     [assessmentRecords],
   )
 
+  const courseLocked = useMemo(() => isCourseLocked(assessmentMap), [assessmentMap])
+
   const stageConfig = getLearningStageConfig(activeStage)
   const stageDiagnostic = getStageDiagnosticRecord(assessmentMap, activeStage)
   const stageSummative = getStageSummativeRecord(assessmentMap, activeStage)
@@ -180,6 +187,63 @@ const DashboardPage: React.FC = () => {
     { name: 'Post-Test', score: Math.round(stageSummative?.percentage ?? 0) },
   ]
 
+  const resolveSubmittedPercentage = (record?: AssessmentProgressRecord) => {
+    if (!record) {
+      return null
+    }
+
+    const isSubmitted = record.isSubmitted === true || record.isFinished === true
+    if (!isSubmitted) {
+      return null
+    }
+
+    const percent = Number(record.percentage)
+    if (Number.isFinite(percent)) {
+      return percent
+    }
+
+    const score = Number(record.score ?? 0)
+    const totalItems = Number(record.totalItems ?? 0)
+
+    if (totalItems <= 0) {
+      return 0
+    }
+
+    return Number(((score / totalItems) * 100).toFixed(2))
+  }
+
+  const learningGainAllStages = useMemo(() => {
+    const stages: LearningStageKey[] = ['prelim', 'midterm', 'final']
+
+    return stages.map((stage) => {
+      const config = getLearningStageConfig(stage)
+      const diagnostic = resolveSubmittedPercentage(getStageDiagnosticRecord(assessmentMap, stage))
+      const postTest = resolveSubmittedPercentage(getStageSummativeRecord(assessmentMap, stage))
+      const gain = typeof diagnostic === 'number' && typeof postTest === 'number' ? roundToOne(postTest - diagnostic) : null
+
+      return {
+        stage: config.label,
+        diagnostic,
+        postTest,
+        gain,
+      }
+    })
+  }, [assessmentMap])
+
+  const learningGainDomain = useMemo(() => {
+    const gains = learningGainAllStages.map((entry) => entry.gain).filter((value): value is number => typeof value === 'number')
+
+    if (gains.length === 0) {
+      return [-25, 25] as const
+    }
+
+    const min = Math.min(...gains, -5)
+    const max = Math.max(...gains, 5)
+    const pad = 5
+
+    return [Math.floor(min - pad), Math.ceil(max + pad)] as const
+  }, [learningGainAllStages])
+
   const stepStatus = [
     { label: 'Course Modules', completed: courseProgress >= 100, locked: false },
     { label: 'Pre-Test', completed: pretestDone, locked: courseProgress < 100 },
@@ -216,6 +280,11 @@ const DashboardPage: React.FC = () => {
   } else {
     nextRoute = ROUTE_PATHS.dashboard.results
     nextLabel = 'View Learning Results'
+  }
+
+  if (courseLocked) {
+    nextRoute = ROUTE_PATHS.dashboard.results
+    nextLabel = 'View Lock Details'
   }
 
   const thetaRaw = (Math.round(stageSummative?.percentage ?? stageDiagnostic?.percentage ?? 0) - 50) / 50
@@ -304,6 +373,31 @@ const DashboardPage: React.FC = () => {
           <p className={`mt-2 font-medium text-base ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>Continue your {stageConfig.label} adaptive learning journey.</p>
         </section>
 
+        {courseLocked ? (
+          <section className={`rounded-3xl border p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${
+            isBrightMode ? 'border-rose-200 bg-rose-50/70' : 'border-rose-500/30 bg-rose-500/10'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`mt-0.5 rounded-2xl p-2 ${isBrightMode ? 'bg-rose-100 text-rose-700' : 'bg-rose-500/15 text-rose-300'}`}>
+                <Lock size={18} />
+              </div>
+              <div>
+                <h2 className={`text-lg font-black tracking-tight ${isBrightMode ? 'text-rose-900' : 'text-rose-100'}`}>Course Locked</h2>
+                <p className={`mt-1 text-sm ${isBrightMode ? 'text-rose-800' : 'text-rose-200'}`}>
+                  You have reached 3 failed post-test attempts. Contact your admin to reset your course progress.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(ROUTE_PATHS.dashboard.results)}
+              className="h-12 px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest text-[10px] inline-flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              View Details <ArrowRight size={16} />
+            </button>
+          </section>
+        ) : null}
+
         <section className="px-2">
           <div className="hidden sm:flex items-center justify-between w-full">
             <StepItem icon={<BookOpen size={20} />} label="Course Modules" active={dependencyGraphData[0]?.active} completed={dependencyGraphData[0]?.completed} locked={dependencyGraphData[0]?.locked} />
@@ -373,6 +467,54 @@ const DashboardPage: React.FC = () => {
             </ResponsiveContainer>
           </ChartContainer>
         </div>
+
+        <ChartContainer title="Learning Gain (All Stages)" icon={<History size={20} className="text-emerald-500" />} isBrightMode={isBrightMode}>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={learningGainAllStages} margin={{ top: 10, right: 24, bottom: 10, left: 6 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
+              <XAxis dataKey="stage" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="score" domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
+              <YAxis
+                yAxisId="gain"
+                orientation="right"
+                domain={learningGainDomain}
+                tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                cursor={{ fill: isBrightMode ? 'rgba(148,163,184,0.12)' : 'rgba(2,6,23,0.35)' }}
+                contentStyle={{
+                  background: isBrightMode ? '#ffffff' : '#0b1220',
+                  border: isBrightMode ? '1px solid #e5e7eb' : '1px solid rgba(148,163,184,0.25)',
+                  borderRadius: 12,
+                }}
+                labelStyle={{ color: isBrightMode ? '#0f172a' : '#e2e8f0', fontWeight: 800 }}
+                itemStyle={{ color: isBrightMode ? '#334155' : '#e2e8f0' }}
+                formatter={(value: unknown, name?: string | number) => {
+                  const label = name === undefined ? '' : String(name)
+                  if (value === null || value === undefined) {
+                    return ['N/A', label]
+                  }
+
+                  if (typeof value === 'number') {
+                    if (label === 'Gain') {
+                      const sign = value > 0 ? '+' : ''
+                      return [`${sign}${value.toFixed(1)}%`, label]
+                    }
+
+                    return [`${value.toFixed(1)}%`, label]
+                  }
+
+                  return [String(value), label]
+                }}
+              />
+              <Bar yAxisId="score" dataKey="diagnostic" name="Diagnostic" fill="#60a5fa" radius={[8, 8, 0, 0]} maxBarSize={48} />
+              <Bar yAxisId="score" dataKey="postTest" name="Post-test" fill="#a78bfa" radius={[8, 8, 0, 0]} maxBarSize={48} />
+              <Line yAxisId="gain" type="monotone" dataKey="gain" name="Gain" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} connectNulls={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </ChartContainer>
 
         <section className={`${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'} rounded-2xl p-6`}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
