@@ -14,7 +14,7 @@ import {
 import { auth } from '../../lib/firebase'
 import { ROUTE_PATHS } from '../../routes/paths'
 import { getUserAssessmentProgress, upsertAssessmentProgress } from '../../services/assessmentProgress'
-const DIAGNOSTIC_PASSING_PERCENTAGE = 70
+const DIAGNOSTIC_PASSING_PERCENTAGE = 75
 
 const toPercentage = (correct: number, total: number) => {
   if (total <= 0) {
