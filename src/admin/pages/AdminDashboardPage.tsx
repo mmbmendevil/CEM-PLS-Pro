@@ -24,6 +24,13 @@ import { signOutAdmin } from '@/services/adminAuth'
 
 const GAP_ANALYSIS_THRESHOLD = 75
 const roundToOne = (value: number) => Math.round(value * 10) / 10
+type AdminSectionId = 'overview' | 'learning-gains' | 'users' | 'account-details'
+
+const ADMIN_SECTIONS: Array<{ id: AdminSectionId; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'User Management' },
+  { id: 'learning-gains', label: 'Learning Gains' },
+]
 
 const KPI = ({
   title,
@@ -113,6 +120,14 @@ const AdminDashboardPage = () => {
   useEffect(() => {
     void loadAdminData()
   }, [])
+
+  const scrollToSection = (sectionId: AdminSectionId) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `${window.location.pathname}#${sectionId}`)
+    }
+  }
 
   const handleSendReset = async (email: string, uid: string) => {
     if (!email || email === 'No email') {
@@ -253,6 +268,7 @@ const AdminDashboardPage = () => {
   const handleSelectUser = async (user: AdminUserRecord) => {
     setSelectedUser(user)
     setSelectedTrial(null)
+    requestAnimationFrame(() => scrollToSection('account-details'))
     setIsLoadingDetails(true)
     setDetailsErrorMessage('')
     setGapAnalysisOutputs([])
@@ -374,14 +390,14 @@ const AdminDashboardPage = () => {
           isBrightMode ? 'border-gray-200 bg-linear-to-r from-white via-blue-50 to-cyan-50' : 'border-slate-700/60 bg-linear-to-r from-slate-900 via-slate-900 to-blue-950/40'
         }`}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className={`rounded-2xl p-2 ${isBrightMode ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-300'}`}>
             <ShieldCheck size={22} />
           </div>
-          <div>
+          <div className="min-w-[220px]">
             <h1 className={`text-2xl font-bold tracking-tight ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Admin Console</h1>
             <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-              Monitor user growth, track average outcomes, and trigger password reset emails.
+              Monitor users, learning gains, account progress, and item quality.
             </p>
           </div>
           <button
@@ -398,18 +414,6 @@ const AdminDashboardPage = () => {
           >
             <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(ROUTE_PATHS.admin.itemAnalysis)}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-              isBrightMode
-                ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
-                : 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
-            }`}
-          >
-            <BarChart3 size={16} />
-            Item analysis
           </button>
           <button
             type="button"
@@ -437,7 +441,37 @@ const AdminDashboardPage = () => {
         </article>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <nav
+        className={`sticky top-3 z-20 flex items-center gap-2 overflow-x-auto rounded-2xl border p-2 shadow-sm backdrop-blur ${
+          isBrightMode ? 'border-gray-200 bg-white/95 shadow-gray-200/60' : 'border-slate-700/60 bg-slate-900/90 shadow-slate-950/30'
+        }`}
+        aria-label="Admin console sections"
+      >
+        {ADMIN_SECTIONS.map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => scrollToSection(section.id)}
+            className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              isBrightMode ? 'text-gray-700 hover:bg-blue-50 hover:text-blue-700' : 'text-slate-200 hover:bg-slate-800 hover:text-blue-200'
+            }`}
+          >
+            {section.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => navigate(ROUTE_PATHS.admin.itemAnalysis)}
+          className={`ml-auto inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            isBrightMode ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-blue-500/20 text-blue-200 hover:bg-blue-500/30'
+          }`}
+        >
+          <BarChart3 size={16} />
+          Item Analysis
+        </button>
+      </nav>
+
+      <section id="overview" className="scroll-mt-28 grid grid-cols-1 gap-4 md:grid-cols-3">
         {placeholders.map((item) => (
           <KPI
             key={item.title}
@@ -448,78 +482,22 @@ const AdminDashboardPage = () => {
             isBrightMode={isBrightMode}
           />
         ))}
-      </div>
+      </section>
+
 
       <article
+        id="users"
         className={`rounded-2xl border p-6 ${
           isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
-        }`}
-      >
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className={`text-lg font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Learning Gains</h2>
-            <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-              Diagnostic → Post-test gain per stage (submitted attempts only).
-            </p>
-          </div>
-          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
-            {learningGains.length} student{learningGains.length === 1 ? '' : 's'}
-          </p>
-        </div>
-
-        {learningGains.length === 0 ? (
-          <p className={`mt-4 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-            No submitted diagnostic/post-test pairs found yet.
-          </p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-180 text-left text-sm">
-              <thead>
-                <tr className={`${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-                  <th className="py-2 pr-3 font-semibold">Student</th>
-                  <th className="py-2 pr-3 text-right font-semibold">Prelim</th>
-                  <th className="py-2 pr-3 text-right font-semibold">Midterm</th>
-                  <th className="py-2 pr-3 text-right font-semibold">Final</th>
-                  <th className="py-2 pr-0 text-right font-semibold">Overall</th>
-                </tr>
-              </thead>
-              <tbody>
-                {learningGains.map((row) => (
-                  <tr
-                    key={`gain-${row.uid}`}
-                    onClick={() => {
-                      const target = users.find((user) => user.uid === row.uid)
-                      if (target) {
-                        void handleSelectUser(target)
-                      }
-                    }}
-                    className={`cursor-pointer border-t transition ${
-                      isBrightMode ? 'border-gray-200 text-gray-800 hover:bg-gray-50' : 'border-slate-700 text-slate-200 hover:bg-slate-800/40'
-                    } ${selectedUser?.uid === row.uid ? (isBrightMode ? 'bg-blue-50' : 'bg-blue-950/20') : ''}`}
-                  >
-                    <td className="py-3 pr-3">
-                      <p className="font-semibold">{row.fullName}</p>
-                      <p className={`mt-0.5 text-xs ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>{row.email}</p>
-                    </td>
-                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.prelimGain)}`}>{formatGain(row.prelimGain)}</td>
-                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.midtermGain)}`}>{formatGain(row.midtermGain)}</td>
-                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.finalGain)}`}>{formatGain(row.finalGain)}</td>
-                    <td className={`py-3 pr-0 text-right font-black ${gainClass(row.overallGain)}`}>{formatGain(row.overallGain)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </article>
-
-      <article
-        className={`rounded-2xl border p-6 ${
-          isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
-        }`}
+        } scroll-mt-28`}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className={`text-lg font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>User Management</h2>
+          <div>
+            <h2 className={`text-lg font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>User Management</h2>
+            <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+              Select an account to review progress, actions, and status.
+            </p>
+          </div>
           <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
             {users.length} user{users.length === 1 ? '' : 's'} loaded
           </p>
@@ -528,7 +506,7 @@ const AdminDashboardPage = () => {
         {users.length === 0 ? (
           <p className={`mt-4 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>No users found.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full min-w-180 text-left text-sm">
               <thead>
                 <tr className={`${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
@@ -639,21 +617,42 @@ const AdminDashboardPage = () => {
             </table>
           </div>
         )}
+      </article>
 
-        <div className={`mt-6 rounded-2xl border p-5 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700/60 bg-slate-950/40'}`}>
+      <article
+        id="account-details"
+        className={`scroll-mt-28 rounded-2xl border p-5 ${isBrightMode ? 'border-gray-200 bg-gray-50/60' : 'border-slate-700/60 bg-slate-950/40'}`}
+      >
           <div className="flex items-center justify-between gap-2">
             <h3 className={`text-base font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Account Details</h3>
             {selectedUser ? (
-              <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
-                {selectedUser.fullName}
-              </p>
+              <span
+                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
+                  selectedUser.role === 'admin'
+                    ? isBrightMode
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-blue-500/20 text-blue-300'
+                    : isBrightMode
+                      ? 'bg-gray-100 text-gray-700'
+                      : 'bg-slate-700 text-slate-200'
+                }`}
+              >
+                {selectedUser.role}
+              </span>
             ) : null}
           </div>
 
           {!selectedUser ? (
             <p className={`mt-3 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-              Select an account above to view grading stage scores and status.
+              Select a user to view progress and results.
             </p>
+          ) : null}
+
+          {selectedUser ? (
+            <div className={`mt-4 rounded-xl border p-4 ${isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700 bg-slate-900/70'}`}>
+              <p className={`text-base font-bold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>{selectedUser.fullName}</p>
+              <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>{selectedUser.email}</p>
+            </div>
           ) : null}
 
           {detailsErrorMessage ? (
@@ -1011,8 +1010,71 @@ const AdminDashboardPage = () => {
               )}
             </div>
           ) : null}
-        </div>
       </article>
+      <article
+        id="learning-gains"
+        className={`rounded-2xl border p-6 ${
+          isBrightMode ? 'border-gray-200 bg-white' : 'border-slate-700/60 bg-slate-900/70'
+        } scroll-mt-28`}
+      >
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className={`text-lg font-semibold ${isBrightMode ? 'text-gray-900' : 'text-slate-100'}`}>Learning Gains</h2>
+            <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+              Diagnostic → Post-test gain per stage (submitted attempts only).
+            </p>
+          </div>
+          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>
+            {learningGains.length} student{learningGains.length === 1 ? '' : 's'}
+          </p>
+        </div>
+
+        {learningGains.length === 0 ? (
+          <p className={`mt-4 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+            No submitted diagnostic/post-test pairs found yet.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-180 text-left text-sm">
+              <thead>
+                <tr className={`${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
+                  <th className="py-2 pr-3 font-semibold">Student</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Prelim</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Midterm</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Final</th>
+                  <th className="py-2 pr-0 text-right font-semibold">Overall</th>
+                </tr>
+              </thead>
+              <tbody>
+                {learningGains.map((row) => (
+                  <tr
+                    key={`gain-${row.uid}`}
+                    onClick={() => {
+                      const target = users.find((user) => user.uid === row.uid)
+                      if (target) {
+                        void handleSelectUser(target)
+                      }
+                    }}
+                    className={`cursor-pointer border-t transition ${
+                      isBrightMode ? 'border-gray-200 text-gray-800 hover:bg-gray-50' : 'border-slate-700 text-slate-200 hover:bg-slate-800/40'
+                    } ${selectedUser?.uid === row.uid ? (isBrightMode ? 'bg-blue-50' : 'bg-blue-950/20') : ''}`}
+                  >
+                    <td className="py-3 pr-3">
+                      <p className="font-semibold">{row.fullName}</p>
+                      <p className={`mt-0.5 text-xs ${isBrightMode ? 'text-gray-500' : 'text-slate-400'}`}>{row.email}</p>
+                    </td>
+                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.prelimGain)}`}>{formatGain(row.prelimGain)}</td>
+                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.midtermGain)}`}>{formatGain(row.midtermGain)}</td>
+                    <td className={`py-3 pr-3 text-right font-semibold ${gainClass(row.finalGain)}`}>{formatGain(row.finalGain)}</td>
+                    <td className={`py-3 pr-0 text-right font-black ${gainClass(row.overallGain)}`}>{formatGain(row.overallGain)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
+
       </section>
     </main>
   )

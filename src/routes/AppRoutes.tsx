@@ -222,6 +222,10 @@ const CourseLockGate = ({ user, element }: CourseLockGateProps) => {
 const AppRoutes = () => {
   const [user, setUser] = useState<User | null>(auth.currentUser)
   const [isAuthReady, setIsAuthReady] = useState(false)
+  const location = useLocation()
+  const routeState = location.state as { from?: unknown } | null
+  const searchParams = new URLSearchParams(location.search)
+  const isAdminLoginHandoff = routeState?.from === ROUTE_PATHS.admin.login || searchParams.get('from') === ROUTE_PATHS.admin.login
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -240,7 +244,7 @@ const AppRoutes = () => {
     <Routes>
       <Route
         path={ROUTE_PATHS.auth.login}
-        element={user ? <Navigate to={ROUTE_PATHS.dashboard.home} replace /> : <LoginPage />}
+        element={user && !isAdminLoginHandoff ? <Navigate to={ROUTE_PATHS.dashboard.home} replace /> : <LoginPage />}
       />
       <Route
         path={ROUTE_PATHS.auth.signin}

@@ -1,24 +1,75 @@
 import { FormEvent, useState } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { useEffect } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { useBrightness } from '@/contexts/BrightnessContext'
+import { auth } from '@/lib/firebase'
 import { ROUTE_PATHS } from '@/routes/paths'
-import { isAdminAuthenticated, signInAdmin } from '@/services/adminAuth'
+import { isAdminAuthenticated, signInAdmin, signOutAdmin } from '@/services/adminAuth'
+import { signOutUser } from '@/services/auth'
+import { isUserAdmin } from '@/services/userProfiles'
 
 const AdminLoginPage = () => {
   const { isBrightMode } = useBrightness()
   const navigate = useNavigate()
   const location = useLocation()
+  const locationState = location.state as { from?: unknown; notice?: unknown } | null
+  const locationNotice = typeof locationState?.notice === 'string' ? locationState.notice : ''
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [isAuthReady, setIsAuthReady] = useState(false)
+  const [isFirebaseAdmin, setIsFirebaseAdmin] = useState(false)
+  const [firebaseEmail, setFirebaseEmail] = useState('')
 
-  if (isAdminAuthenticated()) {
+  useEffect(() => {
+    let isCancelled = false
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!isCancelled) {
+          setFirebaseEmail('')
+          setIsFirebaseAdmin(false)
+          setIsAuthReady(true)
+        }
+        return
+      }
+
+      setFirebaseEmail(user.email ?? '')
+
+      try {
+        const hasAdminRole = await isUserAdmin(user.uid)
+        if (!isCancelled) {
+          setIsFirebaseAdmin(hasAdminRole)
+          setIsAuthReady(true)
+        }
+      } catch {
+        if (!isCancelled) {
+          setIsFirebaseAdmin(false)
+          setIsAuthReady(true)
+        }
+      }
+    })
+
+    return () => {
+      isCancelled = true
+      unsubscribe()
+    }
+  }, [])
+
+  if (isAdminAuthenticated() && isAuthReady && isFirebaseAdmin) {
     return <Navigate to={ROUTE_PATHS.admin.home} replace />
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setErrorMessage('')
+
+    if (!isFirebaseAdmin) {
+      setErrorMessage('Sign in with the Firebase admin account first, then enter the static admin credentials.')
+      return
+    }
 
     const isAllowed = signInAdmin(username, password)
 
@@ -36,6 +87,13 @@ const AdminLoginPage = () => {
         : ROUTE_PATHS.admin.home
 
     navigate(redirectPath, { replace: true })
+  }
+
+  const handleSwitchFirebaseAccount = async () => {
+    setErrorMessage('')
+    signOutAdmin()
+    await signOutUser()
+    navigate(`${ROUTE_PATHS.auth.login}?from=${encodeURIComponent(ROUTE_PATHS.admin.login)}`, { replace: true })
   }
 
   return (
@@ -63,10 +121,34 @@ const AdminLoginPage = () => {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Admin Login</h1>
               <p className={`mt-1 text-sm ${isBrightMode ? 'text-gray-600' : 'text-slate-300'}`}>
-                Use the static admin account to access the admin console.
+                Sign in with the Firebase admin account first, then unlock the admin console.
               </p>
             </div>
           </div>
+
+          {locationNotice ? (
+            <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${isBrightMode ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-amber-500/40 bg-amber-950/30 text-amber-100'}`}>
+              {locationNotice}
+            </p>
+          ) : null}
+
+          {isAuthReady && !isFirebaseAdmin ? (
+            <div className={`mb-4 rounded-xl border px-3 py-3 text-sm ${isBrightMode ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-amber-500/40 bg-amber-950/30 text-amber-100'}`}>
+              <p className="font-semibold">Firebase admin sign-in required.</p>
+              <p className="mt-1">
+                {firebaseEmail
+                  ? `${firebaseEmail} is signed in but does not have an admin role.`
+                  : 'Use the normal app login with the Firebase admin account first.'}
+              </p>
+              <button
+                type="button"
+                onClick={handleSwitchFirebaseAccount}
+                className="mt-3 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-500"
+              >
+                Switch Firebase account
+              </button>
+            </div>
+          ) : null}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <label className="block space-y-1.5">

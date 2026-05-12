@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+        && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function keepsRoleUnchanged() {
+      return !request.resource.data.keys().hasAny(['role'])
+        || (resource != null && request.resource.data.role == resource.data.role);
+    }
+
+    match /userProfiles/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && keepsRoleUnchanged();
+      allow update: if (isOwner(userId) && keepsRoleUnchanged()) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /{document=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /{path=**}/AssessmentProgress/{progressId} {
+      allow read: if isAdmin();
+    }
+  }
+}

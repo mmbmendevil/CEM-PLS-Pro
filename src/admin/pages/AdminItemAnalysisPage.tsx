@@ -213,7 +213,7 @@ const AdminItemAnalysisPage = () => {
               }`}
             >
               <ArrowLeft size={16} />
-              Back
+              Back to Admin Console
             </button>
 
             <button

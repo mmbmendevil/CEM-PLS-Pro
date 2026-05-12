@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import { Zap, BookOpen, BarChart3, Mail, Lock, Eye, EyeOff } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useBrightness } from '../contexts/BrightnessContext'
 import { sendResetPasswordEmail, signInWithEmailPassword, signInWithGoogle } from '../services/auth'
 import { upsertUserProfile } from '../services/userProfiles'
@@ -41,6 +41,12 @@ const LoginPage = () => {
   const [successMessage, setSuccessMessage] = useState('')
   const { isBrightMode } = useBrightness()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const routeState = location.state as { from?: string; notice?: string } | null
+  const requestedRedirect = searchParams.get('from') ?? routeState?.from ?? ''
+  const redirectPath = requestedRedirect.startsWith('/') ? requestedRedirect : ROUTE_PATHS.dashboard.home
+  const routeNotice = routeState?.notice ?? (redirectPath === ROUTE_PATHS.admin.login ? 'Sign in with the Firebase admin account, then enter the static admin credentials.' : '')
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -55,7 +61,7 @@ const LoginPage = () => {
     try {
       setIsSubmitting(true)
       await signInWithEmailPassword(email.trim(), password)
-      navigate(ROUTE_PATHS.dashboard.home)
+      navigate(redirectPath)
     } catch (error) {
       if (error instanceof FirebaseError) {
         setErrorMessage(error.message)
@@ -83,7 +89,7 @@ const LoginPage = () => {
         })
       }
 
-      navigate(ROUTE_PATHS.dashboard.home)
+      navigate(redirectPath)
     } catch (error) {
       if (error instanceof FirebaseError) {
         setErrorMessage(error.message)
@@ -185,6 +191,8 @@ const LoginPage = () => {
                 isBrightMode ? 'bg-white/90 border border-gray-200' : 'bg-[#0b1221]/50 border border-gray-800'
               }`}
             >
+              {routeNotice ? <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">{routeNotice}</p> : null}
+
               <form className="space-y-5" onSubmit={handleLogin}>
                 <div className="relative group">
                   <Mail
