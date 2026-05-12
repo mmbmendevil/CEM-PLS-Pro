@@ -44,10 +44,9 @@ docs/
 
 (Add screenshots here)
 
-## Authors
+## Author
 
 - Mark Benison
-- Nathaniel
 
 ## License
 
