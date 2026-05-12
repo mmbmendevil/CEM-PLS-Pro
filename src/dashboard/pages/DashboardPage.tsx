@@ -522,7 +522,7 @@ const DashboardPage: React.FC = () => {
               <Zap className="text-yellow-500 animate-pulse" size={20} />
               <div>
                 <h3 className={`text-xs font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>Cognitive Ability Index</h3>
-                <p className={`text-[10px] font-medium ${isBrightMode ? 'text-slate-400' : 'text-slate-300'}`}>IRT-based student proficiency estimate.</p>
+                <p className={`text-[10px] font-medium ${isBrightMode ? 'text-slate-400' : 'text-slate-300'}`}>Theta-like proficiency estimate (score-derived).</p>
               </div>
             </div>
             <div className="flex-1 max-w-lg w-full">

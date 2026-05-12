@@ -40,6 +40,21 @@ This document is generated strictly from the current codebase. Any information n
   - Firebase Auth + Firestore persistence — `src/lib/firebase.ts`, `src/services/*`
   - Admin dashboard for metrics and account progress reset/deletion — `src/admin/pages/AdminDashboardPage.tsx`, `src/services/admin.ts`
 
+### Assessment / Modeling Methods (CAT / IRT / BKT / CDM)
+- CAT (Computerized Adaptive Testing):
+  - Implemented as **CAT-style heuristic item selection**, not calibrated CAT (no item bank calibration).
+  - Pre-test selection: module balancing + weight-based difficulty targeting with a fixed point cap (15 pts) — `src/dashboard/data/diagnosticQuestions.ts:getCATPretestInitialQuestions`, `src/dashboard/data/diagnosticQuestions.ts:getCATPretestNextQuestion`
+  - Post-test selection: similar heuristic targeting + pre-test gap focus + module balancing with a fixed point cap (30 pts) — `src/dashboard/data/diagnosticQuestions.ts:getCATPosttestInitialQuestions`, `src/dashboard/data/diagnosticQuestions.ts:getCATPosttestNextQuestion`
+- IRT (Item Response Theory):
+  - No calibrated IRT model (no item parameters `a/b/c`, no estimation procedure over an item bank).
+  - Implemented "theta-like" computations:
+    - Gap analysis result generation uses a **logit transform of proportion-correct** (`theta = log(correct/(total-correct))` when `0 < correct < total`) — `src/services/assessmentProgress.ts:computeTheta`, `src/services/assessmentProgress.ts:generateResult`
+    - Dashboard shows a **linear transform of percentage** into a theta-like index (`(percentage-50)/50`) — `src/dashboard/pages/DashboardPage.tsx`
+- BKT (Bayesian Knowledge Tracing):
+  - NOT IMPLEMENTED (no per-skill hidden state, no slip/guess parameters, no temporal update model found in code).
+- CDM (Cognitive Diagnostic Models):
+  - NOT IMPLEMENTED (no Q-matrix/attribute mastery estimation; only question→competency aggregation + thresholding in gap analysis) — `src/services/assessmentProgress.ts:computeCompetencies`, `src/services/assessmentProgress.ts:computeGaps`
+
 ### Core Objective (aligned with problem in Chapter 1)
 - NOT SPECIFIED IN SYSTEM (Chapter 1 problem statement is not present in the repository).
 - Implemented objectives implied by the UI and logic:
