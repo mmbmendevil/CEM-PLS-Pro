@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { useBrightness } from '../contexts/BrightnessContext'
 import { GradingStageProvider } from '@/contexts/GradingStageContext'
-import Sidebar from './Sidebar.tsx'
+import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
 const DashboardLayout = () => {

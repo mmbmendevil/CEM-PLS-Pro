@@ -1,68 +1,90 @@
 # CEM-PLS-Pro
 
-A Thesis Management System Prototype designed to streamline thesis submission, monitoring, and management processes for students and faculty.
+A Firebase-backed personalized learning system for computer architecture modules, adaptive-style assessments, AI-assisted review materials, learner progress tracking, certification, and admin analytics.
 
 ## Features
 
-- Student thesis submission
-- Thesis tracking system
-- Admin dashboard
-- Authentication system
-- Responsive UI
-- Real-time status monitoring
+- Firebase Auth sign-in and sign-up flows
+- Course modules with bundled local video lessons
+- Diagnostic pre-test and summative post-test flows
+- Gap analysis and personalized study plan generation
+- Review modes for flashcards, audiobook scripts, and cheatsheets
+- Learning results and certification pages
+- Admin dashboard with learner analytics and item analysis
+- Firestore security rules for learner-owned data and admin analytics access
 
 ## Tech Stack
 
-- React
+- React 18
 - TypeScript
 - Vite
 - Tailwind CSS
-- Firebase / Supabase (if applicable)
+- Firebase Auth, Firestore, Storage, and Analytics
+- React Router
+- Recharts
+- Framer Motion
 
-## Live Demo
+## Getting Started
 
-https://cem-pls-pro-21ey.vercel.app
-
-## Installation
+Install dependencies:
 
 ```bash
-git clone https://github.com/yourusername/CEM-PLS-Pro.git
-cd CEM-PLS-Pro
 npm install
+```
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Fill in the Firebase and optional OpenAI/admin values in `.env`, then start the dev server:
+
+```bash
 npm run dev
 ```
 
-## Firebase Setup
+## Scripts
 
-This app reads and writes Firestore directly from the browser, so Firestore security rules must allow authenticated users to access their own `userProfiles/{uid}` data and must allow admins to read cross-user analytics.
-
-Publish `firestore.rules` in Firebase Console or with the Firebase CLI. For the admin console, the signed-in Firebase Auth user also needs a matching profile document:
-
-```txt
-userProfiles/{adminAuthUid}
-  role: "admin"
-  fullName: "Admin"
-  email: "admin@example.com"
+```bash
+npm run dev      # Start the Vite development server
+npm run build    # Type-check and create a production build
+npm run preview  # Preview the production build locally
 ```
 
-The static admin login in `.env` only unlocks the React admin route; it does not authenticate to Firestore by itself.
+## Firebase
+
+Firestore rules are kept at the repository root in `firestore.rules` because `firebase.json` references that path.
+
+For setup details, admin profile requirements, and deployment notes, see [docs/firebase.md](docs/firebase.md).
 
 ## Project Structure
 
 ```txt
-src/
-public/
-docs/
+docs/              Release, Firebase, and system documentation
+public/videos/     Bundled lesson videos served by Vite
+src/admin/         Admin routes, pages, and route protection
+src/auth/          Learner authentication screens
+src/contexts/      Shared React context providers
+src/dashboard/     Learner dashboard, modules, assessments, and review pages
+src/lib/           Firebase initialization
+src/routes/        Route definitions and route constants
+src/services/      Firebase and reviewer-generation service helpers
 ```
 
-## Screenshots
+## Documentation
 
-(Add screenshots here)
+- [Firebase setup](docs/firebase.md)
+- [Release checklist](docs/release-checklist.md)
+- [System documentation](docs/system-documentation.md)
 
-## Author
+## Public Release Notes
 
-- Mark Benison
+- Do not commit `.env`.
+- Rotate any credentials that were ever committed or shared before publishing.
+- Review `.firebaserc` before publishing if the Firebase project ID should remain private.
+- Large lesson videos currently remain in `public/videos/` so the app works locally without external hosting.
 
 ## License
 
-MIT License
+MIT

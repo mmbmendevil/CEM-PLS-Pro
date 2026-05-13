@@ -21,10 +21,15 @@
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "personalized-learning",
+    "react",
+    "firebase",
+    "vite"
+  ],
+  "author": "Mark Benison",
+  "license": "MIT",
+  "description": "A Firebase-backed personalized learning system for computer architecture modules, assessments, review materials, and admin analytics.",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "@types/react": "^19.2.14",
