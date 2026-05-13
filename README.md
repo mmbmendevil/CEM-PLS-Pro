@@ -119,6 +119,8 @@ Admin Page
 
 ## Architecture
 <img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/20e2a242-2226-4ac0-8a88-01d4f54d9ba7" />
+
+
 ## Technology Stack
 
 - React 18
