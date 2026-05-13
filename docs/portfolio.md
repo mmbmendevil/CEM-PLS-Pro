@@ -69,14 +69,15 @@ Summative Post-Test
 <img width="1877" height="897" alt="image" src="https://github.com/user-attachments/assets/eb4d26ff-e9b4-43cf-b534-90ede7d017b3" />
 Learning Result
 <img width="1872" height="906" alt="image" src="https://github.com/user-attachments/assets/745b166b-713a-43b6-b02b-e288a91656b9" />
+
 Certification Page
 <img width="443" height="798" alt="image" src="https://github.com/user-attachments/assets/485048dd-cb1d-414a-a177-74c3e2a39e21" />
+
 Admin Page
 <img width="1110" height="893" alt="image" src="https://github.com/user-attachments/assets/578afb9d-cc6d-4c52-a7fb-cdcd4d87aa36" />
 <img width="1132" height="896" alt="image" src="https://github.com/user-attachments/assets/26514b81-8722-4a31-bfc5-661acc5b064f" />
 <img width="1112" height="902" alt="image" src="https://github.com/user-attachments/assets/12a8ef1f-a024-4b89-bf1e-baaa8f95ac64" />
 <img width="1110" height="878" alt="image" src="https://github.com/user-attachments/assets/fcd98f0b-40b4-4b08-92b6-50c25a2c81fb" />
-<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/66161cd3-ed09-4241-98c3-4f769eb250f1" />
 
 ## Architecture
 <img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/20e2a242-2226-4ac0-8a88-01d4f54d9ba7" />
