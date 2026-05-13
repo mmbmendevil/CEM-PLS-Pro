@@ -43,7 +43,7 @@ The application provides a structured learning flow:
 
 Recommended screenshots are documented in [assets/screenshots](assets/screenshots/README.md).
 
-Recommended architecture diagrams are documented in [assets/architecture](assets/architecture/README.md).
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/66161cd3-ed09-4241-98c3-4f769eb250f1" />
 
 ## Future Improvements
 
