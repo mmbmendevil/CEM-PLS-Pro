@@ -76,25 +76,46 @@ Deployment
 ```
 
 For a portfolio case-study view, see [docs/portfolio.md](docs/portfolio.md).
+Login
+<img width="1897" height="905" alt="image" src="https://github.com/user-attachments/assets/cca8e473-38fb-443d-9ccf-58d772b6b7d0" />
+Create Account
+<img width="1896" height="902" alt="image" src="https://github.com/user-attachments/assets/508d5d64-50f2-4de2-bad0-7045ddd5d599" />
+Dashboard
+<img width="1907" height="903" alt="image" src="https://github.com/user-attachments/assets/eed78282-a311-49cf-a066-dc1637d3873a" />
+<img width="1877" height="900" alt="image" src="https://github.com/user-attachments/assets/40eb4000-6c4a-4498-af84-c8abacc2aa77" />
+<img width="1877" height="893" alt="image" src="https://github.com/user-attachments/assets/01f6e89b-4620-4b25-a7be-43d28d960872" />
+Course Module
+<img width="1873" height="900" alt="image" src="https://github.com/user-attachments/assets/e5285960-12f6-4a0d-be47-a8854657cdfe" />
+<img width="1883" height="897" alt="image" src="https://github.com/user-attachments/assets/31e48f70-0dda-460d-bbbc-b53648028dd3" />
+Diagnostic Pre-test
+<img width="1872" height="766" alt="image" src="https://github.com/user-attachments/assets/f81a936a-e8c7-42d4-becf-46d01f09cb0f" />
+<img width="1909" height="795" alt="image" src="https://github.com/user-attachments/assets/e6b7cc86-5e5a-44d7-8c9d-98c7d29e0c48" />
+Gap Anlaysis
+<img width="1907" height="902" alt="image" src="https://github.com/user-attachments/assets/380f7064-04dc-48bc-953b-13a3587f3d98" />
+<img width="1906" height="902" alt="image" src="https://github.com/user-attachments/assets/443110ce-96d8-4632-8517-3e947e675795" />
+<img width="1902" height="907" alt="image" src="https://github.com/user-attachments/assets/9813c53b-9928-4dac-b8a6-0d7fa635a8a8" />
+<img width="1906" height="902" alt="image" src="https://github.com/user-attachments/assets/67942792-27ed-4a18-b698-870f57688210" />
+Study Plan
+<img width="1892" height="768" alt="image" src="https://github.com/user-attachments/assets/d7f24169-0986-4a3c-b028-6262c0e2349a" />
+<img width="1896" height="897" alt="image" src="https://github.com/user-attachments/assets/a158b2e8-7551-4319-86fe-befe34b72699" />
+<img width="1913" height="774" alt="image" src="https://github.com/user-attachments/assets/45cb172f-839c-47e0-bdd1-18e1c055e549" />
+<img width="1870" height="894" alt="image" src="https://github.com/user-attachments/assets/e02c098b-21d8-4644-92f7-e55135a91d2f" />
+Summative Post-Test
+<img width="1891" height="896" alt="image" src="https://github.com/user-attachments/assets/ba181bae-3483-4c17-911f-c4d4b2914773" />
+<img width="1877" height="897" alt="image" src="https://github.com/user-attachments/assets/eb4d26ff-e9b4-43cf-b534-90ede7d017b3" />
+Learning Result
+<img width="1872" height="906" alt="image" src="https://github.com/user-attachments/assets/745b166b-713a-43b6-b02b-e288a91656b9" />
+Certification Page
+<img width="443" height="798" alt="image" src="https://github.com/user-attachments/assets/485048dd-cb1d-414a-a177-74c3e2a39e21" />
+Admin Page
+<img width="1110" height="893" alt="image" src="https://github.com/user-attachments/assets/578afb9d-cc6d-4c52-a7fb-cdcd4d87aa36" />
+<img width="1132" height="896" alt="image" src="https://github.com/user-attachments/assets/26514b81-8722-4a31-bfc5-661acc5b064f" />
+<img width="1112" height="902" alt="image" src="https://github.com/user-attachments/assets/12a8ef1f-a024-4b89-bf1e-baaa8f95ac64" />
+<img width="1110" height="878" alt="image" src="https://github.com/user-attachments/assets/fcd98f0b-40b4-4b08-92b6-50c25a2c81fb" />
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/66161cd3-ed09-4241-98c3-4f769eb250f1" />
 
-## Screenshots
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/11a5a7d6-5ed6-4a43-897e-1084a283bebf" />
 
-Screenshots are intentionally tracked as placeholders until production captures are added. Recommended filenames and captions are documented in [docs/assets/screenshots](docs/assets/screenshots/README.md).
-
-| Area | Suggested file | Caption |
-| --- | --- | --- |
-| Authentication | `docs/assets/screenshots/01-login.png` | Firebase-backed login and onboarding entry point |
-| Learner dashboard | `docs/assets/screenshots/02-dashboard.png` | Progress overview and next learning actions |
-| Module viewer | `docs/assets/screenshots/03-module-viewer.png` | Video lesson and module completion workflow |
-| Diagnostic pre-test | `docs/assets/screenshots/04-diagnostic-pretest.png` | Assessment interface with adaptive-style question flow |
-| Gap analysis | `docs/assets/screenshots/05-gap-analysis.png` | Competency feedback and learning gap visualization |
-| Study plan | `docs/assets/screenshots/06-personalized-study-plan.png` | AI-assisted reviewer generation from learner results |
-| Review modes | `docs/assets/screenshots/07-review-modes.png` | Flashcards, audiobook, and cheatsheet review options |
-| Certification | `docs/assets/screenshots/08-certification.png` | Learning results and certificate output |
-| Admin dashboard | `docs/assets/screenshots/09-admin-dashboard.png` | Admin analytics for learner progress |
-| Item analysis | `docs/assets/screenshots/10-item-analysis.png` | Assessment item performance review |
-
-Architecture image placeholders are documented in [docs/assets/architecture](docs/assets/architecture/README.md).
 
 ## Technology Stack
 
