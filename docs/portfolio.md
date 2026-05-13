@@ -1,4 +1,4 @@
-<img width="1896" height="902" alt="image" src="https://github.com/user-attachments/assets/a325721b-50a1-4321-bcd9-abe15c13c2e8" /># Portfolio Case Study
+# Portfolio Case Study
 
 ## Project Overview
 
