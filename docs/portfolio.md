@@ -40,7 +40,6 @@ The application provides a structured learning flow:
 - Large lesson media remains isolated under `public/videos/`.
 
 ## Presentation Assets
-
 Login
 <img width="1897" height="905" alt="image" src="https://github.com/user-attachments/assets/cca8e473-38fb-443d-9ccf-58d772b6b7d0" />
 Create Account
@@ -78,6 +77,9 @@ Admin Page
 <img width="1112" height="902" alt="image" src="https://github.com/user-attachments/assets/12a8ef1f-a024-4b89-bf1e-baaa8f95ac64" />
 <img width="1110" height="878" alt="image" src="https://github.com/user-attachments/assets/fcd98f0b-40b4-4b08-92b6-50c25a2c81fb" />
 <img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/66161cd3-ed09-4241-98c3-4f769eb250f1" />
+
+## Architecture
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/20e2a242-2226-4ac0-8a88-01d4f54d9ba7" />
 
 ## Future Improvements
 
