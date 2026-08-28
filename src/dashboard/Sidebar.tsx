@@ -45,6 +45,7 @@ type NavItemProps = {
   isCollapsed?: boolean
   isBrightMode?: boolean
   statusIcon?: React.ReactNode
+  onClick?: () => void
 }
 
 type StageOption = {
@@ -82,7 +83,7 @@ const getStageUnlockStatus = (
   return { unlocked: true, reason: '' }
 }
 
-const NavItem = ({ icon, label, isActive, isLocked, isUnlocked, subtitle, to, isCollapsed, isBrightMode, statusIcon }: NavItemProps) => {
+const NavItem = ({ icon, label, isActive, isLocked, isUnlocked, subtitle, to, isCollapsed, isBrightMode, statusIcon, onClick }: NavItemProps) => {
   const classes = `relative group flex items-center px-4 py-3 rounded-xl transition-all cursor-pointer ${
     isActive
       ? isBrightMode
@@ -160,20 +161,25 @@ const NavItem = ({ icon, label, isActive, isLocked, isUnlocked, subtitle, to, is
 
   if (to) {
     return (
-      <Link to={to} className={classes} title={isCollapsed ? label : undefined}>
+      <Link to={to} onClick={onClick} className={classes} title={isCollapsed ? label : undefined}>
         {content}
       </Link>
     )
   }
 
   return (
-    <div className={classes} title={isCollapsed ? label : undefined}>
+    <div className={classes} onClick={onClick} title={isCollapsed ? label : undefined}>
       {content}
     </div>
   )
 }
 
-const Sidebar = () => {
+type SidebarProps = {
+  isMobileOpen: boolean
+  onClose: () => void
+}
+
+const Sidebar = ({ isMobileOpen, onClose }: SidebarProps) => {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const { isBrightMode } = useBrightness()
@@ -300,13 +306,11 @@ const Sidebar = () => {
   const effectiveStageConfig = getLearningStageConfig(effectiveStage)
   const effectiveStageIsLocked = !stageLocks[effectiveStage]?.unlocked
 
-  return (
+  const desktopSidebar = (
     <div
-      className={`sticky top-0 h-screen shrink-0 border-r flex flex-col font-sans transition-all duration-300 ${
+      className={`hidden lg:flex sticky top-0 h-screen shrink-0 border-r flex-col font-sans transition-all duration-300 ${
         isBrightMode ? 'bg-[#f6f3ea] border-gray-200 text-gray-700' : 'bg-[#111827] border-slate-700/60 text-gray-400'
-      } ${
-        isCollapsed ? 'w-20' : 'w-72'
-      } overflow-hidden`}
+      } ${isCollapsed ? 'w-20' : 'w-72'} overflow-hidden`}
     >
       <div className={`pb-4 flex items-center ${isCollapsed ? 'p-4 justify-center' : 'p-8 gap-2'}`}>
         <div className="flex items-end gap-0.5">
@@ -565,6 +569,266 @@ const Sidebar = () => {
         </button>
       </div>
     </div>
+  )
+
+  const mobileSidebar = (
+    <>
+      <button
+        type="button"
+        aria-label="Close navigation"
+        onClick={onClose}
+        className={`fixed inset-0 z-40 cursor-default bg-black/50 transition-opacity duration-300 lg:hidden ${
+          isMobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+      />
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-[min(19rem,86vw)] border-r flex flex-col font-sans transition-transform duration-300 lg:hidden ${
+          isBrightMode ? 'bg-[#f6f3ea] border-gray-200 text-gray-700' : 'bg-[#111827] border-slate-700/60 text-gray-400'
+        } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}
+      >
+        <div className={`flex items-center justify-between p-5 border-b ${isBrightMode ? 'border-gray-200/80' : 'border-slate-700/60'}`}>
+          <div className="flex items-end gap-0.5">
+            <div className="w-1.5 h-3 bg-blue-500 rounded-full" />
+            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+            <div className="w-1.5 h-4 bg-blue-400 rounded-full" />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`rounded-full p-2 transition-colors ${isBrightMode ? 'text-gray-500 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-800'}`}
+            aria-label="Close sidebar"
+          >
+            <ChevronLeft size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-5 px-3 space-y-7">
+          <section>
+            <h3 className={`px-3 text-[10px] font-bold tracking-[0.2em] uppercase mb-4 ${isBrightMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              Overview
+            </h3>
+            <nav className="space-y-1">
+              <NavItem
+                icon={<LayoutGrid size={20} />}
+                label="Dashboard"
+                isActive={isDashboardActive}
+                to={ROUTE_PATHS.dashboard.home}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              <NavItem
+                icon={<Book size={20} />}
+                label="Courses"
+                isActive={isCoursesActive}
+                isUnlocked={!courseLocked}
+                isLocked={courseLocked}
+                subtitle={courseLocked ? 'LOCKED' : 'BROWSE'}
+                to={!courseLocked ? ROUTE_PATHS.dashboard.courses : undefined}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              <NavItem
+                icon={<User size={20} />}
+                label="Profile"
+                isActive={isProfileActive}
+                to={ROUTE_PATHS.dashboard.profile}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+            </nav>
+          </section>
+
+          <section>
+            <h3 className={`px-3 text-[10px] font-bold tracking-[0.2em] uppercase mb-4 ${isBrightMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              Grading Stages
+            </h3>
+            <div className="px-3">
+              <div
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
+                  isBrightMode ? 'border-gray-200 bg-white' : 'border-gray-700/60 bg-[#0b1220]'
+                }`}
+              >
+                <span className={`text-[9px] font-black uppercase tracking-[0.22em] shrink-0 ${isBrightMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Stage
+                </span>
+                <div className="relative flex-1 min-w-0">
+                  <select
+                    value={effectiveStageIsLocked ? resolvedStage : effectiveStage}
+                    onChange={(event) => {
+                      const nextStage = event.target.value as LearningStageKey
+                      if (stageLocks[nextStage]?.unlocked) {
+                        setSelectedStage(nextStage)
+                      }
+                    }}
+                    className={`w-full appearance-none rounded-md py-0.5 pl-1 pr-6 text-sm font-semibold outline-none ${
+                      isBrightMode ? 'bg-white text-gray-900' : 'bg-[#0b1220] text-gray-100'
+                    }`}
+                    aria-label="Select grading stage"
+                  >
+                    {STAGE_OPTIONS.map((stageOption) => {
+                      const isLocked = !stageLocks[stageOption.key]?.unlocked
+
+                      return (
+                        <option
+                          key={stageOption.key}
+                          value={stageOption.key}
+                          className={isBrightMode ? 'bg-white text-gray-900' : 'bg-[#0b1220] text-gray-100'}
+                          disabled={isLocked}
+                        >
+                          {stageOption.label}
+                          {isLocked ? ` - ${stageLocks[stageOption.key]?.reason ?? 'Locked'}` : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <ChevronDown
+                    size={13}
+                    className={`pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2 ${isBrightMode ? 'text-gray-500' : 'text-gray-400'}`}
+                  />
+                </div>
+              </div>
+              <p className={`mt-1.5 px-1 text-[9px] font-medium uppercase tracking-[0.22em] ${isBrightMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                Viewing: {effectiveStageConfig.label}
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h3 className={`px-3 text-[10px] font-bold tracking-[0.2em] uppercase mb-4 ${isBrightMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              Learning Flow
+            </h3>
+            <nav className="space-y-1">
+              <NavItem
+                icon={<Layers size={20} />}
+                label="Course Modules"
+                isActive={isModulesActive}
+                isUnlocked={!courseLocked && !effectiveStageIsLocked}
+                isLocked={courseLocked || effectiveStageIsLocked}
+                subtitle={courseLocked || effectiveStageIsLocked ? 'LOCKED' : 'CURRENT'}
+                to={!courseLocked && !effectiveStageIsLocked ? ROUTE_PATHS.dashboard.modules : undefined}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              <NavItem
+                icon={<ClipboardCheck size={20} />}
+                label="Diagnostic Pre-test"
+                isActive={isDiagnosticActive}
+                isUnlocked={!courseLocked && isDiagnosticUnlocked}
+                isLocked={courseLocked || !isDiagnosticUnlocked}
+                subtitle={!courseLocked && isDiagnosticUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                statusIcon={!courseLocked && isDiagnosticUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={!courseLocked && isDiagnosticUnlocked ? ROUTE_PATHS.dashboard.diagnostic : undefined}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              <NavItem
+                icon={<BrainCircuit size={20} />}
+                label="Gap Analysis"
+                isActive={isGapAnalysisActive}
+                isUnlocked={!courseLocked && isGapAnalysisUnlocked}
+                isLocked={courseLocked || !isGapAnalysisUnlocked}
+                subtitle={!courseLocked && isGapAnalysisUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                statusIcon={!courseLocked && isGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={!courseLocked && isGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.gapAnalysis : undefined}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              {!hasReviewerCreated ? (
+                <NavItem
+                  icon={<FileText size={20} />}
+                  label="Personalized Study Plan"
+                  isActive={isStudyPlanActive}
+                  isUnlocked={!courseLocked && isStudyPlanUnlocked}
+                  isLocked={courseLocked || !isStudyPlanUnlocked}
+                  subtitle={!courseLocked && isStudyPlanUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                  statusIcon={!courseLocked && isStudyPlanUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                  to={!courseLocked && isStudyPlanUnlocked ? ROUTE_PATHS.dashboard.studyPlan : undefined}
+                  isBrightMode={isBrightMode}
+                  onClick={onClose}
+                />
+              ) : (
+                <NavItem
+                  icon={<FileText size={20} />}
+                  label="Review Page"
+                  isActive={isReviewActive}
+                  isUnlocked={!courseLocked && isReviewUnlocked}
+                  isLocked={courseLocked || !isReviewUnlocked}
+                  subtitle={!courseLocked && isReviewUnlocked ? 'READY' : 'LOCKED'}
+                  statusIcon={!courseLocked && isReviewUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                  to={!courseLocked && isReviewUnlocked ? ROUTE_PATHS.dashboard.review : undefined}
+                  isBrightMode={isBrightMode}
+                  onClick={onClose}
+                />
+              )}
+              <NavItem
+                icon={<CheckSquare size={20} />}
+                label="Summative Post-test"
+                isActive={isPostTestActive}
+                isUnlocked={!courseLocked && isSummativeUnlocked}
+                isLocked={courseLocked || !isSummativeUnlocked}
+                subtitle={!courseLocked && isSummativeUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                statusIcon={!courseLocked && isSummativeUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={!courseLocked && isSummativeUnlocked ? ROUTE_PATHS.dashboard.postTest : undefined}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              {isPostTestGapAnalysisUnlocked && (
+                <NavItem
+                  icon={<BrainCircuit size={20} />}
+                  label="Post-Test Gap Analysis"
+                  isActive={isPostTestGapAnalysisActive}
+                  isUnlocked={!courseLocked && isPostTestGapAnalysisUnlocked}
+                  isLocked={courseLocked}
+                  subtitle={!courseLocked && isPostTestGapAnalysisUnlocked ? 'FAILED TEST' : 'LOCKED'}
+                  statusIcon={!courseLocked && isPostTestGapAnalysisUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                  to={!courseLocked && isPostTestGapAnalysisUnlocked ? ROUTE_PATHS.dashboard.postTestGapAnalysis : undefined}
+                  isBrightMode={isBrightMode}
+                  onClick={onClose}
+                />
+              )}
+              <NavItem
+                icon={<BarChart size={20} />}
+                label="Learning Results"
+                isActive={isResultsActive}
+                isUnlocked={isResultsUnlocked}
+                isLocked={!isResultsUnlocked}
+                subtitle={
+                  isResultsUnlocked
+                    ? hasPassedSummative
+                      ? 'PASSED'
+                      : 'RETAKE REQUIRED'
+                    : 'LOCKED'
+                }
+                statusIcon={isResultsUnlocked ? <Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} /> : undefined}
+                to={isResultsUnlocked ? ROUTE_PATHS.dashboard.results : undefined}
+                isBrightMode={isBrightMode}
+                onClick={onClose}
+              />
+              {isCertificationUnlocked ? (
+                <NavItem
+                  icon={<Award size={20} />}
+                  label="Certification"
+                  isActive={isCertificationActive}
+                  isUnlocked={true}
+                  subtitle="UNLOCKED"
+                  statusIcon={<Unlock size={14} className={isBrightMode ? 'text-blue-500' : 'text-blue-400'} />}
+                  to={ROUTE_PATHS.dashboard.certification}
+                  isBrightMode={isBrightMode}
+                  onClick={onClose}
+                />
+              ) : null}
+            </nav>
+          </section>
+        </div>
+      </div>
+    </>
+  )
+
+  return (
+    <>
+      {mobileSidebar}
+      {desktopSidebar}
+    </>
   )
 }
 

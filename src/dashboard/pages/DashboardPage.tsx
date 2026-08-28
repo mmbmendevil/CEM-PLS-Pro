@@ -332,21 +332,21 @@ const DashboardPage: React.FC = () => {
         <div className="absolute top-[20%] -right-[10%] w-[30%] h-[50%] bg-indigo-500/20 blur-[120px] rounded-full" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pt-10 space-y-8 relative z-10">
-        <header className={`flex items-center justify-between backdrop-blur-xl border p-5 rounded-4xl shadow-xl shadow-slate-200/50 ${
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 space-y-6 sm:space-y-8 relative z-10">
+        <header className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between backdrop-blur-xl border p-4 sm:p-5 rounded-3xl sm:rounded-4xl shadow-xl shadow-slate-200/50 ${
           isBrightMode ? 'bg-white/80 border-white/70' : 'bg-[#111827] border-slate-700/60'
         }`}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
               <LayoutDashboard size={24} />
             </div>
-            <div>
-              <h1 className={`text-xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>Adaptive Learning OS</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Computer Organization and Architecture</p>
+            <div className="min-w-0">
+              <h1 className={`text-lg sm:text-xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>Adaptive Learning OS</h1>
+              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Computer Organization and Architecture</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-start sm:self-auto">
             <div className="hidden md:flex flex-col items-end mr-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 text-right">Status</p>
               <div className="flex items-center gap-2">
@@ -361,20 +361,20 @@ const DashboardPage: React.FC = () => {
         </header>
 
         <section
-          className={`rounded-4xl border p-8 shadow-sm ${
+          className={`rounded-3xl sm:rounded-4xl border p-5 sm:p-8 shadow-sm ${
             isBrightMode
               ? 'border-blue-100 bg-linear-to-r from-blue-600/5 via-indigo-600/5 to-transparent'
               : 'border-slate-700/60 bg-linear-to-r from-blue-500/10 via-indigo-500/10 to-slate-900/0'
           }`}
         >
-          <h1 className={`text-3xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>
             Welcome back, <span className="text-blue-600">{fullName}</span>
           </h1>
-          <p className={`mt-2 font-medium text-base ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>Continue your {stageConfig.label} adaptive learning journey.</p>
+          <p className={`mt-2 font-medium text-sm sm:text-base ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>Continue your {stageConfig.label} adaptive learning journey.</p>
         </section>
 
         {courseLocked ? (
-          <section className={`rounded-3xl border p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${
+          <section className={`rounded-3xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${
             isBrightMode ? 'border-rose-200 bg-rose-50/70' : 'border-rose-500/30 bg-rose-500/10'
           }`}>
             <div className="flex items-start gap-3">
@@ -391,7 +391,7 @@ const DashboardPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(ROUTE_PATHS.dashboard.results)}
-              className="h-12 px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest text-[10px] inline-flex items-center justify-center gap-2 transition-all active:scale-95"
+              className="h-12 px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest text-[10px] inline-flex items-center justify-center gap-2 transition-all active:scale-95 w-full sm:w-auto"
             >
               View Details <ArrowRight size={16} />
             </button>
@@ -425,19 +425,19 @@ const DashboardPage: React.FC = () => {
           </div>
         </section>
 
-        <section className={`backdrop-blur-xl border rounded-4xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6 group hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 ${
+        <section className={`backdrop-blur-xl border rounded-3xl sm:rounded-4xl p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 group hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 ${
           isBrightMode ? 'bg-white/80 border-slate-200' : 'bg-[#111827] border-slate-700/60'
         }`}>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 mb-2">Next Recommended Step</p>
-            <h2 className={`text-2xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>{nextLabel}</h2>
+            <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>{nextLabel}</h2>
           </div>
-          <button type="button" onClick={handleStartModules} className="h-16 px-10 bg-linear-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-widest text-[11px] rounded-3xl shadow-[0_0_30px_-5px_rgba(59,130,246,0.5)] hover:shadow-[0_0_40px_-5px_rgba(59,130,246,0.6)] transition-all active:scale-95 hover:scale-105 flex items-center gap-3">
+          <button type="button" onClick={handleStartModules} className="h-12 sm:h-16 w-full sm:w-auto px-6 sm:px-10 bg-linear-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-widest text-[10px] sm:text-[11px] rounded-3xl shadow-[0_0_30px_-5px_rgba(59,130,246,0.5)] hover:shadow-[0_0_40px_-5px_rgba(59,130,246,0.6)] transition-all active:scale-95 hover:scale-105 flex items-center justify-center gap-3">
             {nextLabel} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </section>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Course Progress" value={`${courseProgress}%`} color="bg-blue-500" isBrightMode={isBrightMode} progress={courseProgress} />
           <StatCard label="Mastered Concepts" value={String(masteredConcepts)} color="bg-emerald-500" isBrightMode={isBrightMode} progress={masteredConcepts > 0 ? 100 : 0} />
           <StatCard label="Developing" value={String(developingConcepts)} color="bg-amber-500" isBrightMode={isBrightMode} progress={developingConcepts > 0 ? 100 : 0} />
@@ -446,7 +446,7 @@ const DashboardPage: React.FC = () => {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <ChartContainer title="Concept Mastery Map" icon={<Target size={20} className="text-blue-500" />} isBrightMode={isBrightMode}>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={220}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="#334155" opacity={0.3} />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 600 }} />
@@ -456,7 +456,7 @@ const DashboardPage: React.FC = () => {
           </ChartContainer>
 
           <ChartContainer title="Academic Gain Progression" icon={<TrendingUp size={20} className="text-indigo-500" />} isBrightMode={isBrightMode}>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={220}>
               <LineChart data={lineData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -469,7 +469,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         <ChartContainer title="Learning Gain (All Stages)" icon={<History size={20} className="text-emerald-500" />} isBrightMode={isBrightMode}>
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={240}>
             <ComposedChart data={learningGainAllStages} margin={{ top: 10, right: 24, bottom: 10, left: 6 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
               <XAxis dataKey="stage" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -516,8 +516,8 @@ const DashboardPage: React.FC = () => {
           </ResponsiveContainer>
         </ChartContainer>
 
-        <section className={`${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'} rounded-2xl p-6`}>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <section className={`${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'} rounded-2xl p-5 sm:p-6`}>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <Zap className="text-yellow-500 animate-pulse" size={20} />
               <div>
@@ -526,8 +526,8 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
             <div className="flex-1 max-w-lg w-full">
-              <div className="flex justify-between items-end mb-2">
-                  <span className={`text-3xl font-black tabular-nums ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>{theta.toFixed(2)}</span>
+              <div className="flex justify-between items-end mb-2 gap-3">
+                  <span className={`text-2xl sm:text-3xl font-black tabular-nums ${isBrightMode ? 'text-slate-900' : 'text-white'}`}>{theta.toFixed(2)}</span>
                   <span className="text-[10px] font-black uppercase text-blue-500">{theta >= 0.7 ? 'Advanced' : theta >= 0.3 ? 'Skilled' : theta >= 0 ? 'Developing' : 'Beginner'}</span>
               </div>
               <div className={`h-3 w-full rounded-full overflow-hidden p-0.5 border ${isBrightMode ? 'bg-slate-200 border-slate-300' : 'bg-slate-800 border-slate-700'}`}>
@@ -541,7 +541,7 @@ const DashboardPage: React.FC = () => {
         </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <div className={`xl:col-span-8 rounded-2xl p-5 min-h-55 flex flex-col items-center ${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'}`}>
+          <div className={`xl:col-span-8 rounded-2xl p-4 sm:p-5 min-h-55 flex flex-col items-center ${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'}`}>
             <div className="w-full flex items-center gap-3 mb-8">
               <Network size={20} className="text-purple-500" />
               <h3 className={`text-xs font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>Concept Dependency Graph</h3>
@@ -579,7 +579,7 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className={`xl:col-span-4 rounded-2xl p-5 h-80 flex flex-col ${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'}`}>
+          <div className={`xl:col-span-4 rounded-2xl p-4 sm:p-5 h-80 flex flex-col ${isBrightMode ? 'bg-white/80 border border-slate-200' : 'bg-[#111827] border border-slate-700/60'}`}>
             <div className="flex items-center gap-2 mb-6">
               <History size={20} className="text-blue-500" />
               <h3 className={`text-xs font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>Activity Log</h3>
@@ -597,7 +597,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <footer className={`mt-2 flex flex-col md:flex-row items-center justify-between gap-6 pt-8 pb-4 px-4 rounded-2xl border ${isBrightMode ? 'border-slate-200 bg-white/80' : 'border-slate-700/60 bg-[#111827]'}`}>
+        <footer className={`mt-2 flex flex-col md:flex-row items-center justify-between gap-4 pt-6 sm:pt-8 pb-4 px-4 rounded-2xl border ${isBrightMode ? 'border-slate-200 bg-white/80' : 'border-slate-700/60 bg-[#111827]'}`}>
           <div className={`flex items-center gap-4 ${isBrightMode ? 'text-slate-600' : 'text-slate-300'}`}>
             <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isBrightMode ? 'bg-slate-200/80' : 'bg-slate-800'}`}>
               <History size={16} />
@@ -666,12 +666,12 @@ const ChartContainer = ({
   children: React.ReactNode;
   isBrightMode: boolean;
 }) => (
-  <div className={`rounded-2xl p-6 min-h-80 hover:border-blue-500/30 transition-all border ${isBrightMode ? 'bg-white/80 border-slate-200' : 'bg-[#111827] border-slate-700/60'}`}>
+  <div className={`rounded-2xl p-4 sm:p-6 min-h-72 hover:border-blue-500/30 transition-all border ${isBrightMode ? 'bg-white/80 border-slate-200' : 'bg-[#111827] border-slate-700/60'}`}>
     <div className="flex items-center gap-2 mb-6">
       {icon}
       <h3 className={`text-xs font-black uppercase tracking-widest ${isBrightMode ? 'text-slate-500' : 'text-slate-300'}`}>{title}</h3>
     </div>
-    <div className="h-65 w-full">{children}</div>
+    <div className="h-56 sm:h-65 w-full">{children}</div>
   </div>
 );
 

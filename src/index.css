@@ -4,9 +4,16 @@ html {
   scroll-behavior: smooth;
 }
 
+body,
+#root {
+  min-height: 100vh;
+}
+
 body {
   background-color: #f9fafb;
   color: #111827;
+  overflow-x: hidden;
+  margin: 0;
 }
 
 .btn-primary {

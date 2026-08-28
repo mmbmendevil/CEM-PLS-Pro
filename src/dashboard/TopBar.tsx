@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, ChevronRight } from 'lucide-react'
+import { Bell, ChevronDown, ChevronRight, Menu } from 'lucide-react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -9,7 +9,11 @@ import { ROUTE_PATHS } from '../routes/paths'
 import { signOutUser } from '../services/auth'
 import { getUserProfile } from '../services/userProfiles'
 
-const TopBar = () => {
+type TopBarProps = {
+  onMenuClick: () => void
+}
+
+const TopBar = ({ onMenuClick }: TopBarProps) => {
   const location = useLocation()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -108,29 +112,48 @@ const TopBar = () => {
 
   return (
     <header
-      className={`sticky top-0 z-40 h-20 w-full shrink-0 border-b flex items-center justify-between px-8 font-sans transition-colors ${
+      className={`sticky top-0 z-40 w-full shrink-0 border-b flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4 lg:h-20 lg:px-8 font-sans transition-colors ${
         isBrightMode
           ? 'bg-[#fffdf7] border-gray-200 text-black'
           : 'bg-[#111827] border-slate-700/60 text-white'
       }`}
     >
-      <nav className="flex items-center gap-3">
-        <Link
-          to={ROUTE_PATHS.dashboard.home}
-          className={`text-xs font-black tracking-widest cursor-pointer uppercase transition-colors ${
-            isBrightMode ? 'text-gray-600 hover:text-black' : 'text-gray-500 hover:text-gray-300'
+      <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className={`inline-flex items-center justify-center rounded-xl p-2 transition-colors lg:hidden ${
+            isBrightMode ? 'text-gray-700 hover:bg-gray-200/70' : 'text-gray-300 hover:bg-slate-800/70'
           }`}
+          aria-label="Open navigation menu"
         >
-          Home
-        </Link>
-        <ChevronRight size={14} className={isBrightMode ? 'text-gray-500' : 'text-gray-600'} />
-        <span className={`text-xs font-black tracking-widest uppercase ${isBrightMode ? 'text-gray-900' : 'text-gray-100'}`}>
-          {pageTitle}
-        </span>
-      </nav>
+          <Menu size={20} />
+        </button>
 
-      <div className="flex items-center gap-6">
-        <div className={`flex items-center gap-4 pr-6 ${isBrightMode ? 'border-r border-gray-200' : 'border-r border-gray-800'}`}>
+        <nav className="hidden md:flex items-center gap-3 min-w-0">
+          <Link
+            to={ROUTE_PATHS.dashboard.home}
+            className={`text-xs font-black tracking-widest cursor-pointer uppercase transition-colors ${
+              isBrightMode ? 'text-gray-600 hover:text-black' : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            Home
+          </Link>
+          <ChevronRight size={14} className={isBrightMode ? 'text-gray-500' : 'text-gray-600'} />
+          <span className={`text-xs font-black tracking-widest uppercase ${isBrightMode ? 'text-gray-900' : 'text-gray-100'}`}>
+            {pageTitle}
+          </span>
+        </nav>
+
+        <div className="md:hidden min-w-0">
+          <p className={`text-[10px] font-black tracking-[0.22em] uppercase ${isBrightMode ? 'text-gray-900' : 'text-gray-100'}`}>
+            {pageTitle}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className={`hidden sm:flex items-center gap-4 pr-3 lg:pr-6 ${isBrightMode ? 'border-r border-gray-200' : 'border-r border-gray-800'}`}>
           <div className="relative" ref={notificationRef}>
             <button
               type="button"
@@ -168,19 +191,19 @@ const TopBar = () => {
           <ThemeToggle />
         </div>
 
-        <div className="relative pl-2" ref={menuRef}>
+        <div className="relative" ref={menuRef}>
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="flex items-center gap-3 group cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 group cursor-pointer"
           >
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-500/20 border border-blue-400/30 text-white">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 border border-blue-400/30 text-white">
                 {initials}
               </div>
             </div>
 
-            <div className="flex flex-col items-start leading-tight">
+            <div className="hidden md:flex flex-col items-start leading-tight">
               <span
                 className={`text-sm font-black tracking-tight uppercase group-hover:text-blue-400 transition-colors ${
                   isBrightMode ? 'text-gray-900' : 'text-white'
@@ -195,7 +218,7 @@ const TopBar = () => {
 
             <ChevronDown
               size={16}
-              className={`transition-colors ${isBrightMode ? 'text-gray-600 group-hover:text-black' : 'text-gray-500 group-hover:text-white'}`}
+              className={`hidden md:block transition-colors ${isBrightMode ? 'text-gray-600 group-hover:text-black' : 'text-gray-500 group-hover:text-white'}`}
             />
           </button>
 
